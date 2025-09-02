@@ -118,6 +118,9 @@
             const [activeModule, setActiveModule] = useState('dashboard');
             const [showModal, setShowModal] = useState(false);
             const [modalType, setModalType] = useState('');
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [showItemDetail, setShowItemDetail] = useState(false);
+            const [formData, setFormData] = useState({});
 
             // États pour les données
             const [productions] = useState([
@@ -156,17 +159,412 @@
                 }
             ]);
 
-            const [inventaire] = useState([
+            // Fonctions pour gérer l'inventaire
+            const ajouterArticle = (nouvelArticle) => {
+                const nouvelId = Math.max(...inventaire.map(i => i.id), 0) + 1;
+                const article = {
+                    ...nouvelArticle,
+                    id: nouvelId,
+                    valeur: nouvelArticle.quantite * nouvelArticle.prixUnitaire,
+                    fournisseurPrincipal: nouvelArticle.fournisseurs?.[0]?.nom || '',
+                    fournisseurs: nouvelArticle.fournisseurs || [{ nom: nouvelArticle.fournisseurPrincipal, prix: nouvelArticle.prixUnitaire, delai: '1-2 jours' }],
+                    recette: nouvelArticle.recette || []
+                };
+
+            const ItemDetailModal = () => {
+                if (!showItemDetail || !selectedItem) return null;
+
+                const [editMode, setEditMode] = useState(false);
+                const [editData, setEditData] = useState(selectedItem);
+
+                const handleSave = () => {
+                    modifierArticle(editData);
+                    setEditMode(false);
+                };
+
+                const ajouterFournisseur = () => {
+                    setEditData(prev => ({
+                        ...prev,
+                        fournisseurs: [...prev.fournisseurs, { nom: '', prix: 0, delai: '' }]
+                    }));
+                };
+
+                const supprimerFournisseur = (index) => {
+                    setEditData(prev => ({
+                        ...prev,
+                        fournisseurs: prev.fournisseurs.filter((_, i) => i !== index)
+                    }));
+                };
+
+                const modifierFournisseur = (index, field, value) => {
+                    setEditData(prev => ({
+                        ...prev,
+                        fournisseurs: prev.fournisseurs.map((fournisseur, i) => 
+                            i === index ? { ...fournisseur, [field]: value } : fournisseur
+                        )
+                    }));
+                };
+
+                const ajouterComposantRecette = () => {
+                    setEditData(prev => ({
+                        ...prev,
+                        recette: [...prev.recette, { composant: '', quantite: 0, unite: '' }]
+                    }));
+                };
+
+                const supprimerComposantRecette = (index) => {
+                    setEditData(prev => ({
+                        ...prev,
+                        recette: prev.recette.filter((_, i) => i !== index)
+                    }));
+                };
+
+                const modifierComposantRecette = (index, field, value) => {
+                    setEditData(prev => ({
+                        ...prev,
+                        recette: prev.recette.map((composant, i) => 
+                            i === index ? { ...composant, [field]: value } : composant
+                        )
+                    }));
+                };
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-2xl font-semibold text-gray-800">
+                                        {editMode ? 'Modifier' : 'Détails'} - {editData.nom}
+                                    </h3>
+                                    <div className="flex space-x-2">
+                                        {!editMode && (
+                                            <button 
+                                                onClick={() => setEditMode(true)}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                                            >
+                                                <Icons.Edit />
+                                                <span>Modifier</span>
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={() => setShowItemDetail(false)}
+                                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                        >
+                                            Fermer
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {/* Informations générales */}
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h4 className="text-lg font-semibold text-gray-800 mb-4">Informations Générales</h4>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                                                    {editMode ? (
+                                                        <input 
+                                                            type="text" 
+                                                            value={editData.nom} 
+                                                            onChange={(e) => setEditData(prev => ({...prev, nom: e.target.value}))}
+                                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                                        />
+                                                    ) : (
+                                                        <p className="text-gray-900">{editData.nom}</p>
+                                                    )}
+                                                </div>
+                                                
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                                                    {editMode ? (
+                                                        <select 
+                                                            value={editData.categorie} 
+                                                            onChange={(e) => setEditData(prev => ({...prev, categorie: e.target.value}))}
+                                                            className="w-full p-3 border border-gray-300 rounded-lg"
+                                                        >
+                                                            <option value="Matière Première">Matière Première</option>
+                                                            <option value="Composants">Composants</option>
+                                                            <option value="Finition">Finition</option>
+                                                            <option value="Produit Fini">Produit Fini</option>
+                                                        </select>
+                                                    ) : (
+                                                        <p className="text-gray-900">{editData.categorie}</p>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+                                                        {editMode ? (
+                                                            <input 
+                                                                type="number" 
+                                                                value={editData.quantite} 
+                                                                onChange={(e) => setEditData(prev => ({...prev, quantite: parseFloat(e.target.value) || 0}))}
+                                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900">{editData.quantite} {editData.unite}</p>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Prix unitaire</label>
+                                                        {editMode ? (
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.01"
+                                                                value={editData.prixUnitaire} 
+                                                                onChange={(e) => setEditData(prev => ({...prev, prixUnitaire: parseFloat(e.target.value) || 0}))}
+                                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                            />
+                                                        ) : (
+                                                            <p className="text-gray-900">{editData.prixUnitaire}$</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                                    {editMode ? (
+                                                        <textarea 
+                                                            value={editData.description || ''} 
+                                                            onChange={(e) => setEditData(prev => ({...prev, description: e.target.value}))}
+                                                            className="w-full p-3 border border-gray-300 rounded-lg h-20"
+                                                        />
+                                                    ) : (
+                                                        <p className="text-gray-900">{editData.description || 'Aucune description'}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Fournisseurs */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-4">
+                                                <h4 className="text-lg font-semibold text-gray-800">Fournisseurs</h4>
+                                                {editMode && (
+                                                    <button 
+                                                        onClick={ajouterFournisseur}
+                                                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center space-x-1"
+                                                    >
+                                                        <Icons.Plus />
+                                                        <span>Ajouter</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="space-y-3">
+                                                {editData.fournisseurs?.map((fournisseur, index) => (
+                                                    <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                                                        {editMode ? (
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1 grid grid-cols-1 gap-2">
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder="Nom du fournisseur"
+                                                                            value={fournisseur.nom} 
+                                                                            onChange={(e) => modifierFournisseur(index, 'nom', e.target.value)}
+                                                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                                        />
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <input 
+                                                                                type="number" 
+                                                                                step="0.01"
+                                                                                placeholder="Prix"
+                                                                                value={fournisseur.prix} 
+                                                                                onChange={(e) => modifierFournisseur(index, 'prix', parseFloat(e.target.value) || 0)}
+                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                                            />
+                                                                            <input 
+                                                                                type="text" 
+                                                                                placeholder="Délai"
+                                                                                value={fournisseur.delai} 
+                                                                                onChange={(e) => modifierFournisseur(index, 'delai', e.target.value)}
+                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    {editData.fournisseurs.length > 1 && (
+                                                                        <button 
+                                                                            onClick={() => supprimerFournisseur(index)}
+                                                                            className="ml-2 text-red-600 hover:text-red-800"
+                                                                        >
+                                                                            <Icons.Trash2 />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <p className="font-medium text-gray-800">{fournisseur.nom}</p>
+                                                                <p className="text-sm text-gray-600">{fournisseur.prix}$ - Délai: {fournisseur.delai}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Recette/Nomenclature */}
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-lg font-semibold text-gray-800">Recette/Nomenclature</h4>
+                                            {editMode && (
+                                                <button 
+                                                    onClick={ajouterComposantRecette}
+                                                    className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 flex items-center space-x-1"
+                                                >
+                                                    <Icons.Plus />
+                                                    <span>Ajouter Composant</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                        
+                                        {editData.recette?.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {editData.recette.map((composant, index) => (
+                                                    <div key={index} className="border rounded-lg p-4 bg-blue-50">
+                                                        {editMode ? (
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1 grid grid-cols-1 gap-2">
+                                                                        <input 
+                                                                            type="text" 
+                                                                            placeholder="Nom du composant"
+                                                                            value={composant.composant} 
+                                                                            onChange={(e) => modifierComposantRecette(index, 'composant', e.target.value)}
+                                                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                                        />
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <input 
+                                                                                type="number" 
+                                                                                step="0.01"
+                                                                                placeholder="Quantité"
+                                                                                value={composant.quantite} 
+                                                                                onChange={(e) => modifierComposantRecette(index, 'quantite', parseFloat(e.target.value) || 0)}
+                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                                            />
+                                                                            <input 
+                                                                                type="text" 
+                                                                                placeholder="Unité"
+                                                                                value={composant.unite} 
+                                                                                onChange={(e) => modifierComposantRecette(index, 'unite', e.target.value)}
+                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <button 
+                                                                        onClick={() => supprimerComposantRecette(index)}
+                                                                        className="ml-2 text-red-600 hover:text-red-800"
+                                                                    >
+                                                                        <Icons.Trash2 />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <p className="font-medium text-gray-800">{composant.composant}</p>
+                                                                <p className="text-sm text-gray-600">{composant.quantite} {composant.unite}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500 italic">Aucun composant défini</p>
+                                        )}
+
+                                        {/* Statistiques */}
+                                        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+                                            <h5 className="font-semibold text-gray-800 mb-3">Statistiques</h5>
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <p className="text-gray-600">Valeur totale</p>
+                                                    <p className="font-semibold text-lg text-green-600">
+                                                        {(editData.quantite * editData.prixUnitaire).toLocaleString()}$
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600">Statut stock</p>
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                        editData.quantite <= editData.seuilMin ? 
+                                                        'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                                    }`}>
+                                                        {editData.quantite <= editData.seuilMin ? 'Stock Bas' : 'Stock OK'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {editMode && (
+                                    <div className="flex space-x-3 mt-8 pt-6 border-t">
+                                        <button 
+                                            onClick={() => {setEditMode(false); setEditData(selectedItem);}}
+                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                        >
+                                            Annuler
+                                        </button>
+                                        <button 
+                                            onClick={handleSave}
+                                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                        >
+                                            Sauvegarder
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+                setInventaire([...inventaire, article]);
+                setShowModal(false);
+                setFormData({});
+            };
+
+            const modifierArticle = (articleModifie) => {
+                const updatedInventaire = inventaire.map(item => 
+                    item.id === articleModifie.id 
+                        ? { ...articleModifie, valeur: articleModifie.quantite * articleModifie.prixUnitaire }
+                        : item
+                );
+                setInventaire(updatedInventaire);
+                setShowItemDetail(false);
+                setSelectedItem(null);
+            };
+
+            const supprimerArticle = (id) => {
+                if (confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+                    setInventaire(inventaire.filter(item => item.id !== id));
+                }
+            };
+
+            const ouvrirDetailItem = (item) => {
+                setSelectedItem(item);
+                setShowItemDetail(true);
+            };
+
+            const [inventaire, setInventaire] = useState([
                 {
                     id: 1,
                     nom: 'Bois Chêne Premium',
                     categorie: 'Matière Première',
                     quantite: 120,
                     unite: 'm²',
+                    typeUnite: 'surface',
                     prixUnitaire: 45,
                     valeur: 5400,
                     seuilMin: 20,
-                    fournisseur: 'Bois du Québec Inc.'
+                    fournisseurPrincipal: 'Bois du Québec Inc.',
+                    fournisseurs: [
+                        { nom: 'Bois du Québec Inc.', prix: 45, delai: '5-7 jours' },
+                        { nom: 'Foresterie Premium', prix: 48, delai: '3-5 jours' }
+                    ],
+                    recette: [],
+                    description: 'Bois de chêne premium pour meubles haut de gamme'
                 },
                 {
                     id: 2,
@@ -174,10 +572,17 @@
                     categorie: 'Composants',
                     quantite: 500,
                     unite: 'pcs',
+                    typeUnite: 'unité',
                     prixUnitaire: 8.5,
                     valeur: 4250,
                     seuilMin: 100,
-                    fournisseur: 'Métaux Spécialisés'
+                    fournisseurPrincipal: 'Métaux Spécialisés',
+                    fournisseurs: [
+                        { nom: 'Métaux Spécialisés', prix: 8.5, delai: '2-3 jours' },
+                        { nom: 'Quincaillerie Pro', prix: 9.0, delai: '1-2 jours' }
+                    ],
+                    recette: [],
+                    description: 'Visserie et quincaillerie de qualité professionnelle'
                 },
                 {
                     id: 3,
@@ -185,10 +590,17 @@
                     categorie: 'Finition',
                     quantite: 15,
                     unite: 'L',
+                    typeUnite: 'volume',
                     prixUnitaire: 35,
                     valeur: 525,
                     seuilMin: 5,
-                    fournisseur: 'Chimie Pro'
+                    fournisseurPrincipal: 'Chimie Pro',
+                    fournisseurs: [
+                        { nom: 'Chimie Pro', prix: 35, delai: '1-2 jours' },
+                        { nom: 'Finitions Expert', prix: 33, delai: '3-4 jours' }
+                    ],
+                    recette: [],
+                    description: 'Vernis de protection haute qualité pour finitions durables'
                 },
                 {
                     id: 4,
@@ -196,10 +608,20 @@
                     categorie: 'Produit Fini',
                     quantite: 75,
                     unite: 'pcs',
+                    typeUnite: 'unité',
                     prixUnitaire: 250,
                     valeur: 18750,
                     seuilMin: 10,
-                    fournisseur: 'Production Interne'
+                    fournisseurPrincipal: 'Production Interne',
+                    fournisseurs: [
+                        { nom: 'Production Interne', prix: 250, delai: 'immédiat' }
+                    ],
+                    recette: [
+                        { composant: 'Bois Chêne Premium', quantite: 2.5, unite: 'm²' },
+                        { composant: 'Quincaillerie Haut Gamme', quantite: 15, unite: 'pcs' },
+                        { composant: 'Vernis Protection', quantite: 0.5, unite: 'L' }
+                    ],
+                    description: 'Chaise de bureau ergonomique en chêne premium'
                 }
             ]);
 
@@ -500,10 +922,10 @@
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {inventaire.map((item) => (
-                                        <tr key={item.id}>
+                                        <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => ouvrirDetailItem(item)}>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium text-gray-900">{item.nom}</div>
-                                                <div className="text-sm text-gray-500">{item.fournisseur}</div>
+                                                <div className="text-sm text-gray-500">{item.fournisseurPrincipal}</div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.categorie}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -526,10 +948,28 @@
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                                <button className="text-blue-600 hover:text-blue-900 inline-flex"><Icons.Eye /></button>
-                                                <button className="text-green-600 hover:text-green-900 inline-flex"><Icons.Edit /></button>
-                                                <button className="text-red-600 hover:text-red-900 inline-flex"><Icons.Trash2 /></button>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2" onClick={(e) => e.stopPropagation()}>
+                                                <button 
+                                                    className="text-blue-600 hover:text-blue-900 inline-flex" 
+                                                    onClick={(e) => {e.stopPropagation(); ouvrirDetailItem(item);}}
+                                                    title="Voir détails"
+                                                >
+                                                    <Icons.Eye />
+                                                </button>
+                                                <button 
+                                                    className="text-green-600 hover:text-green-900 inline-flex"
+                                                    onClick={(e) => {e.stopPropagation(); ouvrirDetailItem(item);}}
+                                                    title="Modifier"
+                                                >
+                                                    <Icons.Edit />
+                                                </button>
+                                                <button 
+                                                    className="text-red-600 hover:text-red-900 inline-flex"
+                                                    onClick={(e) => {e.stopPropagation(); supprimerArticle(item.id);}}
+                                                    title="Supprimer"
+                                                >
+                                                    <Icons.Trash2 />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -704,50 +1144,164 @@
             const Modal = () => {
                 if (!showModal) return null;
 
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (modalType === 'inventaire') {
+                        ajouterArticle(formData);
+                    }
+                };
+
+                const handleInputChange = (field, value) => {
+                    setFormData(prev => ({ ...prev, [field]: value }));
+                };
+
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full mx-4">
-                            <h3 className="text-xl font-semibold mb-4">
-                                {modalType === 'production' ? 'Nouvel Ordre de Production' : 'Nouvel Article Inventaire'}
-                            </h3>
-                            <div className="space-y-4">
-                                <input 
-                                    type="text" 
-                                    placeholder={modalType === 'production' ? 'Nom du produit' : 'Nom de l\'article'}
-                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                />
-                                <input 
-                                    type="number" 
-                                    placeholder="Quantité"
-                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                />
-                                {modalType === 'production' && (
-                                    <>
-                                        <input 
-                                            type="date" 
-                                            className="w-full p-3 border border-gray-300 rounded-lg"
-                                        />
-                                        <input 
-                                            type="number" 
-                                            placeholder="Coût matière"
-                                            className="w-full p-3 border border-gray-300 rounded-lg"
-                                        />
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex space-x-3 mt-6">
-                                <button 
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                >
-                                    Annuler
-                                </button>
-                                <button 
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                >
-                                    Créer
-                                </button>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                            <div className="p-6">
+                                <h3 className="text-xl font-semibold mb-6">
+                                    {modalType === 'production' ? 'Nouvel Ordre de Production' : 'Nouvel Article Inventaire'}
+                                </h3>
+                                
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    {modalType === 'inventaire' ? (
+                                        <>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Nom de l'article"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.nom || ''}
+                                                    onChange={(e) => handleInputChange('nom', e.target.value)}
+                                                    required
+                                                />
+                                                <select 
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.categorie || ''}
+                                                    onChange={(e) => handleInputChange('categorie', e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">Sélectionner catégorie</option>
+                                                    <option value="Matière Première">Matière Première</option>
+                                                    <option value="Composants">Composants</option>
+                                                    <option value="Finition">Finition</option>
+                                                    <option value="Produit Fini">Produit Fini</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <input 
+                                                    type="number" 
+                                                    placeholder="Quantité"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.quantite || ''}
+                                                    onChange={(e) => handleInputChange('quantite', parseFloat(e.target.value) || 0)}
+                                                    required
+                                                />
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Unité (kg, pcs, L...)"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.unite || ''}
+                                                    onChange={(e) => handleInputChange('unite', e.target.value)}
+                                                    required
+                                                />
+                                                <select 
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.typeUnite || ''}
+                                                    onChange={(e) => handleInputChange('typeUnite', e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">Type d'unité</option>
+                                                    <option value="unité">À l'unité</option>
+                                                    <option value="poids">Au poids</option>
+                                                    <option value="volume">Au volume</option>
+                                                    <option value="surface">À la surface</option>
+                                                    <option value="longueur">À la longueur</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    placeholder="Prix unitaire"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.prixUnitaire || ''}
+                                                    onChange={(e) => handleInputChange('prixUnitaire', parseFloat(e.target.value) || 0)}
+                                                    required
+                                                />
+                                                <input 
+                                                    type="number"
+                                                    placeholder="Seuil minimum"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.seuilMin || ''}
+                                                    onChange={(e) => handleInputChange('seuilMin', parseFloat(e.target.value) || 0)}
+                                                />
+                                            </div>
+                                            
+                                            <textarea 
+                                                placeholder="Description"
+                                                className="w-full p-3 border border-gray-300 rounded-lg h-20"
+                                                value={formData.description || ''}
+                                                onChange={(e) => handleInputChange('description', e.target.value)}
+                                            />
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur principal</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Nom du fournisseur"
+                                                    className="w-full p-3 border border-gray-300 rounded-lg"
+                                                    value={formData.fournisseurPrincipal || ''}
+                                                    onChange={(e) => handleInputChange('fournisseurPrincipal', e.target.value)}
+                                                />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        // Production form (existing)
+                                        <>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Nom du produit"
+                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                required
+                                            />
+                                            <input 
+                                                type="number" 
+                                                placeholder="Quantité"
+                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                required
+                                            />
+                                            <input 
+                                                type="date" 
+                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                                required
+                                            />
+                                            <input 
+                                                type="number" 
+                                                placeholder="Coût matière"
+                                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                            />
+                                        </>
+                                    )}
+                                </form>
+                                
+                                <div className="flex space-x-3 mt-6">
+                                    <button 
+                                        onClick={() => {setShowModal(false); setFormData({});}}
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                        type="button"
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button 
+                                        onClick={handleSubmit}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    >
+                                        Créer
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -772,6 +1326,7 @@
                         {renderActiveModule()}
                     </div>
                     <Modal />
+                    <ItemDetailModal />
                 </div>
             );
         };
