@@ -36,7 +36,466 @@
                 coutMatiere: 1250,
                 coutMainOeuvre: 800,
                 progression: 65
-            },
+            }
+
+        // Variables globales pour la gestion des onglets et de l'édition
+        let currentTab = 'general';
+        let editModeActive = false;
+
+        // Gestion des onglets dans la modal détail
+        function setActiveTab(tab) {
+            currentTab = tab;
+            renderApp();
+        }
+
+        // Fonctions de gestion générale des items
+        function saveGeneralChanges() {
+            const form = document.getElementById('editGeneralForm');
+            const formData = new FormData(form);
+            
+            const updatedItem = {
+                ...selectedItem,
+                nom: formData.get('nom'),
+                categorie: formData.get('categorie'),
+                quantite: parseFloat(formData.get('quantite')) || 0,
+                unite: formData.get('unite'),
+                prixUnitaire: parseFloat(formData.get('prixUnitaire')) || 0,
+                description: formData.get('description')
+            };
+            
+            updatedItem.valeur = updatedItem.quantite * updatedItem.prixUnitaire;
+            
+            // Mettre à jour l'inventaire
+            const index = inventaire.findIndex(item => item.id === selectedItem.id);
+            if (index !== -1) {
+                inventaire[index] = updatedItem;
+                selectedItem = updatedItem;
+            }
+            
+            renderApp();
+        }
+
+        function resetGeneralForm() {
+            renderApp();
+        }
+
+        function addAttribute() {
+            const input = document.getElementById('newAttribute');
+            const newAttr = input.value.trim();
+            
+            if (newAttr && !selectedItem.attributs.includes(newAttr)) {
+                selectedItem.attributs.push(newAttr);
+                input.value = '';
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function removeAttribute(attr) {
+            selectedItem.attributs = selectedItem.attributs.filter(a => a !== attr);
+            
+            // Mettre à jour l'inventaire
+            const index = inventaire.findIndex(item => item.id === selectedItem.id);
+            if (index !== -1) {
+                inventaire[index] = selectedItem;
+            }
+            
+            renderApp();
+        }
+
+        function duplicateItem(itemId) {
+            const itemToDuplicate = inventaire.find(item => item.id === itemId);
+            if (itemToDuplicate) {
+                const newId = Math.max(...inventaire.map(i => i.id), 0) + 1;
+                const duplicatedItem = {
+                    ...itemToDuplicate,
+                    id: newId,
+                    nom: itemToDuplicate.nom + ' (Copie)',
+                    quantite: 0,
+                    valeur: 0
+                };
+                
+                inventaire.push(duplicatedItem);
+                renderApp();
+            }
+        }
+
+        // Fonctions de gestion des nomenclatures
+        function addNomenclature() {
+            const newId = Math.max(...(selectedItem.nomenclatures?.map(n => n.id) || [0]), 0) + 1;
+            const newNomenclature = {
+                id: newId,
+                nom: `Nomenclature ${newId}`,
+                type: 'Production',
+                active: selectedItem.nomenclatures?.length === 0, // Active si c'est la première
+                composants: [],
+                coutTotal: 0,
+                tempsProduction: 0
+            };
+            
+            if (!selectedItem.nomenclatures) {
+                selectedItem.nomenclatures = [];
+            }
+            
+            selectedItem.nomenclatures.push(newNomenclature);
+            
+            // Mettre à jour l'inventaire
+            const index = inventaire.findIndex(item => item.id === selectedItem.id);
+            if (index !== -1) {
+                inventaire[index] = selectedItem;
+            }
+            
+            renderApp();
+        }
+
+        function toggleNomenclature(nomenclatureId) {
+            const nomenclature = selectedItem.nomenclatures.find(n => n.id === nomenclatureId);
+            if (nomenclature) {
+                // Si on active cette nomenclature, désactiver les autres
+                if (!nomenclature.active) {
+                    selectedItem.nomenclatures.forEach(n => n.active = false);
+                    nomenclature.active = true;
+                } else {
+                    nomenclature.active = false;
+                }
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function deleteNomenclature(nomenclatureId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette nomenclature ?')) {
+                selectedItem.nomenclatures = selectedItem.nomenclatures.filter(n => n.id !== nomenclatureId);
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function addComposant(nomenclatureId) {
+            const composantName = prompt('Nom du composant:');
+            const quantite = parseFloat(prompt('Quantité:') || '0');
+            const unite = prompt('Unité:') || 'pcs';
+            const cout = parseFloat(prompt('Coût:') || '0');
+            
+            if (composantName && quantite > 0) {
+                const nomenclature = selectedItem.nomenclatures.find(n => n.id === nomenclatureId);
+                if (nomenclature) {
+                    nomenclature.composants.push({
+                        composant: composantName,
+                        quantite: quantite,
+                        unite: unite,
+                        cout: cout
+                    });
+                    
+                    // Recalculer le coût total
+                    nomenclature.coutTotal = nomenclature.composants.reduce((sum, c) => sum + (c.cout || 0), 0);
+                    
+                    // Mettre à jour l'inventaire
+                    const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                    if (index !== -1) {
+                        inventaire[index] = selectedItem;
+                    }
+                    
+                    renderApp();
+                }
+            }
+        }
+
+        function removeComposant(nomenclatureId, composantIndex) {
+            if (confirm('Supprimer ce composant ?')) {
+                const nomenclature = selectedItem.nomenclatures.find(n => n.id === nomenclatureId);
+                if (nomenclature) {
+                    nomenclature.composants.splice(composantIndex, 1);
+                    
+                    // Recalculer le coût total
+                    nomenclature.coutTotal = nomenclature.composants.reduce((sum, c) => sum + (c.cout || 0), 0);
+                    
+                    // Mettre à jour l'inventaire
+                    const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                    if (index !== -1) {
+                        inventaire[index] = selectedItem;
+                    }
+                    
+                    renderApp();
+                }
+            }
+        }
+
+        // Fonctions de gestion des variantes
+        function addVariante() {
+            const nom = prompt('Nom de la variante:');
+            if (nom) {
+                const newId = Math.max(...(selectedItem.variantes?.map(v => v.id) || [0]), 0) + 1;
+                const newVariante = {
+                    id: newId,
+                    nom: nom,
+                    attributs: {},
+                    stock: 0,
+                    prix: selectedItem.prixUnitaire
+                };
+                
+                // Ajouter des attributs par défaut basés sur les attributs de l'item
+                selectedItem.attributs?.forEach(attr => {
+                    const valeur = prompt(`Valeur pour ${attr}:`);
+                    if (valeur) {
+                        newVariante.attributs[attr] = valeur;
+                    }
+                });
+                
+                if (!selectedItem.variantes) {
+                    selectedItem.variantes = [];
+                }
+                
+                selectedItem.variantes.push(newVariante);
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function deleteVariante(varianteId) {
+            if (confirm('Supprimer cette variante ?')) {
+                selectedItem.variantes = selectedItem.variantes.filter(v => v.id !== varianteId);
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function adjustStock(varianteId, action) {
+            if (typeof varianteId === 'string') {
+                // Ajustement du stock principal
+                const quantite = parseFloat(document.getElementById('adjustmentQuantity')?.value || '0');
+                const type = document.getElementById('adjustmentType')?.value || 'manual';
+                const motif = document.getElementById('adjustmentReason')?.value || '';
+                
+                if (quantite > 0) {
+                    if (action === 'add') {
+                        selectedItem.quantite += quantite;
+                    } else if (action === 'remove') {
+                        selectedItem.quantite = Math.max(0, selectedItem.quantite - quantite);
+                    }
+                    
+                    selectedItem.valeur = selectedItem.quantite * selectedItem.prixUnitaire;
+                    
+                    // Mettre à jour l'inventaire
+                    const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                    if (index !== -1) {
+                        inventaire[index] = selectedItem;
+                    }
+                    
+                    // Reset des champs
+                    if (document.getElementById('adjustmentQuantity')) {
+                        document.getElementById('adjustmentQuantity').value = '';
+                    }
+                    if (document.getElementById('adjustmentReason')) {
+                        document.getElementById('adjustmentReason').value = '';
+                    }
+                    
+                    renderApp();
+                }
+            } else {
+                // Ajustement du stock d'une variante
+                const variante = selectedItem.variantes.find(v => v.id === varianteId);
+                if (variante) {
+                    const quantite = parseFloat(prompt('Quantité à ' + (action === 'add' ? 'ajouter' : 'retirer') + ':') || '0');
+                    if (quantite > 0) {
+                        if (action === 'add') {
+                            variante.stock += quantite;
+                        } else if (action === 'remove') {
+                            variante.stock = Math.max(0, variante.stock - quantite);
+                        }
+                        
+                        // Mettre à jour l'inventaire
+                        const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                        if (index !== -1) {
+                            inventaire[index] = selectedItem;
+                        }
+                        
+                        renderApp();
+                    }
+                }
+            }
+        }
+
+        // Fonctions de gestion des fournisseurs
+        function addFournisseur() {
+            const nom = prompt('Nom du fournisseur:');
+            const prix = parseFloat(prompt('Prix unitaire:') || '0');
+            const delai = prompt('Délai de livraison:') || '1-2 jours';
+            
+            if (nom && prix > 0) {
+                if (!selectedItem.fournisseurs) {
+                    selectedItem.fournisseurs = [];
+                }
+                
+                selectedItem.fournisseurs.push({
+                    nom: nom,
+                    prix: prix,
+                    delai: delai
+                });
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function deleteFournisseur(fournisseurIndex) {
+            if (confirm('Supprimer ce fournisseur ?')) {
+                selectedItem.fournisseurs.splice(fournisseurIndex, 1);
+                
+                // Si on a supprimé le fournisseur principal, le premier devient principal
+                if (fournisseurIndex === 0 && selectedItem.fournisseurs.length > 0) {
+                    selectedItem.fournisseurPrincipal = selectedItem.fournisseurs[0].nom;
+                }
+                
+                // Mettre à jour l'inventaire
+                const index = inventaire.findIndex(item => item.id === selectedItem.id);
+                if (index !== -1) {
+                    inventaire[index] = selectedItem;
+                }
+                
+                renderApp();
+            }
+        }
+
+        function setMainSupplier(fournisseurIndex) {
+            // Réorganiser pour mettre le fournisseur sélectionné en premier
+            const fournisseur = selectedItem.fournisseurs[fournisseurIndex];
+            selectedItem.fournisseurs.splice(fournisseurIndex, 1);
+            selectedItem.fournisseurs.unshift(fournisseur);
+            selectedItem.fournisseurPrincipal = fournisseur.nom;
+            
+            // Mettre à jour l'inventaire
+            const index = inventaire.findIndex(item => item.id === selectedItem.id);
+            if (index !== -1) {
+                inventaire[index] = selectedItem;
+            }
+            
+            renderApp();
+        }
+
+        function createPurchaseOrder(fournisseurIndex) {
+            const fournisseur = selectedItem.fournisseurs[fournisseurIndex];
+            const quantite = prompt(`Quantité à commander chez ${fournisseur.nom}:`);
+            
+            if (quantite && parseFloat(quantite) > 0) {
+                const total = parseFloat(quantite) * fournisseur.prix;
+                alert(`Commande créée:\\n\\nFournisseur: ${fournisseur.nom}\\nProduit: ${selectedItem.nom}\\nQuantité: ${quantite} ${selectedItem.unite}\\nTotal: ${total.toFixed(2)}$\\nDélai: ${fournisseur.delai}`);
+                
+                // En production, ici on créerait une vraie commande d'achat
+            }
+        }
+
+        function viewSupplierHistory(fournisseurIndex) {
+            const fournisseur = selectedItem.fournisseurs[fournisseurIndex];
+            alert(`Historique avec ${fournisseur.nom}:\\n\\n(Fonctionnalité en développement)\\n\\n- Commandes passées\\n- Performance délais\\n- Évolution des prix\\n- Notes qualité`);
+        }
+
+        // Mise à jour de la fonction pour gérer les onglets
+        function renderItemDetail() {
+            if (!selectedItem) return '';
+            
+            return `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+                        <div class="flex flex-col h-full">
+                            <!-- Header -->
+                            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                                <div>
+                                    <h3 class="text-2xl font-semibold text-gray-800">${selectedItem.nom}</h3>
+                                    <p class="text-gray-600">${selectedItem.categorie} • ${selectedItem.quantite} ${selectedItem.unite} disponible</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button onclick="duplicateItem(${selectedItem.id})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2">
+                                        <span>📋</span><span>Dupliquer</span>
+                                    </button>
+                                    <button onclick="closeItemDetail()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                        Fermer
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Onglets -->
+                            <div class="border-b border-gray-200">
+                                <div class="flex space-x-0">
+                                    <button onclick="setActiveTab('general')" class="px-6 py-3 border-b-2 font-medium text-sm ${currentTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        📋 Général
+                                    </button>
+                                    <button onclick="setActiveTab('nomenclatures')" class="px-6 py-3 border-b-2 font-medium text-sm ${currentTab === 'nomenclatures' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        🔧 Nomenclatures
+                                    </button>
+                                    <button onclick="setActiveTab('variantes')" class="px-6 py-3 border-b-2 font-medium text-sm ${currentTab === 'variantes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        🎨 Variantes
+                                    </button>
+                                    <button onclick="setActiveTab('fournisseurs')" class="px-6 py-3 border-b-2 font-medium text-sm ${currentTab === 'fournisseurs' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        🏪 Fournisseurs
+                                    </button>
+                                    <button onclick="setActiveTab('stocks')" class="px-6 py-3 border-b-2 font-medium text-sm ${currentTab === 'stocks' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        📊 Stocks & Coûts
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Contenu des onglets -->
+                            <div class="flex-1 p-6">
+                                ${renderTabContent(currentTab)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTabContent(activeTab) {
+            switch(activeTab) {
+                case 'general':
+                    return renderGeneralTab();
+                case 'nomenclatures':
+                    return renderNomenclaturesTab();
+                case 'variantes':
+                    return renderVariantesTab();
+                case 'fournisseurs':
+                    return renderFournisseursTab();
+                case 'stocks':
+                    return renderStocksTab();
+                default:
+                    return renderGeneralTab();
+            }
+        },
             {
                 id: 2,
                 produit: 'Table Conférence XL',
@@ -77,7 +536,9 @@
                     { nom: 'Bois du Québec Inc.', prix: 45, delai: '5-7 jours' },
                     { nom: 'Foresterie Premium', prix: 48, delai: '3-5 jours' }
                 ],
-                recette: [],
+                nomenclatures: [],
+                variantes: [],
+                attributs: ['Essence', 'Grade'],
                 description: 'Bois de chêne premium pour meubles haut de gamme'
             },
             {
@@ -95,7 +556,13 @@
                     { nom: 'Métaux Spécialisés', prix: 8.5, delai: '2-3 jours' },
                     { nom: 'Quincaillerie Pro', prix: 9.0, delai: '1-2 jours' }
                 ],
-                recette: [],
+                nomenclatures: [],
+                variantes: [
+                    { id: 1, nom: 'Vis Inox 4x50mm', attributs: { type: 'Vis', materiau: 'Inox', taille: '4x50mm' }, stock: 200, prix: 8.5 },
+                    { id: 2, nom: 'Vis Laiton 4x50mm', attributs: { type: 'Vis', materiau: 'Laiton', taille: '4x50mm' }, stock: 150, prix: 9.2 },
+                    { id: 3, nom: 'Vis Inox 5x60mm', attributs: { type: 'Vis', materiau: 'Inox', taille: '5x60mm' }, stock: 150, prix: 9.8 }
+                ],
+                attributs: ['Type', 'Matériau', 'Taille'],
                 description: 'Visserie et quincaillerie de qualité professionnelle'
             },
             {
@@ -113,7 +580,12 @@
                     { nom: 'Chimie Pro', prix: 35, delai: '1-2 jours' },
                     { nom: 'Finitions Expert', prix: 33, delai: '3-4 jours' }
                 ],
-                recette: [],
+                nomenclatures: [],
+                variantes: [
+                    { id: 1, nom: 'Vernis Mat', attributs: { finition: 'Mat', couleur: 'Transparent' }, stock: 8, prix: 35 },
+                    { id: 2, nom: 'Vernis Brillant', attributs: { finition: 'Brillant', couleur: 'Transparent' }, stock: 7, prix: 37 }
+                ],
+                attributs: ['Finition', 'Couleur'],
                 description: 'Vernis de protection haute qualité pour finitions durables'
             },
             {
@@ -130,11 +602,40 @@
                 fournisseurs: [
                     { nom: 'Production Interne', prix: 250, delai: 'immédiat' }
                 ],
-                recette: [
-                    { composant: 'Bois Chêne Premium', quantite: 2.5, unite: 'm²' },
-                    { composant: 'Quincaillerie Haut Gamme', quantite: 15, unite: 'pcs' },
-                    { composant: 'Vernis Protection', quantite: 0.5, unite: 'L' }
+                nomenclatures: [
+                    {
+                        id: 1,
+                        nom: 'Nomenclature Standard',
+                        type: 'Production',
+                        active: true,
+                        composants: [
+                            { composant: 'Bois Chêne Premium', quantite: 2.5, unite: 'm²', cout: 112.5 },
+                            { composant: 'Quincaillerie Haut Gamme', quantite: 15, unite: 'pcs', cout: 127.5 },
+                            { composant: 'Vernis Protection', quantite: 0.5, unite: 'L', cout: 17.5 }
+                        ],
+                        coutTotal: 257.5,
+                        tempsProduction: 4.5
+                    },
+                    {
+                        id: 2,
+                        nom: 'Nomenclature Économique',
+                        type: 'Production',
+                        active: false,
+                        composants: [
+                            { composant: 'Bois Chêne Premium', quantite: 2.0, unite: 'm²', cout: 90 },
+                            { composant: 'Quincaillerie Haut Gamme', quantite: 12, unite: 'pcs', cout: 102 },
+                            { composant: 'Vernis Protection', quantite: 0.3, unite: 'L', cout: 10.5 }
+                        ],
+                        coutTotal: 202.5,
+                        tempsProduction: 3.8
+                    }
                 ],
+                variantes: [
+                    { id: 1, nom: 'Chaise Chêne Mat', attributs: { couleur: 'Chêne Naturel', finition: 'Mat' }, stock: 35, prix: 250 },
+                    { id: 2, nom: 'Chaise Chêne Brillant', attributs: { couleur: 'Chêne Naturel', finition: 'Brillant' }, stock: 25, prix: 270 },
+                    { id: 3, nom: 'Chaise Chêne Teinté', attributs: { couleur: 'Chêne Teinté', finition: 'Mat' }, stock: 15, prix: 280 }
+                ],
+                attributs: ['Couleur', 'Finition'],
                 description: 'Chaise de bureau ergonomique en chêne premium'
             }
         ];
@@ -625,68 +1126,1069 @@
         function renderItemDetail() {
             if (!selectedItem) return '';
             
+            // Variables pour l'état de l'édition
+            let editMode = false;
+            let activeTab = 'general';
+            
             return `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-2xl font-semibold text-gray-800">Détails - ${selectedItem.nom}</h3>
-                                <button onclick="closeItemDetail()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                                    Fermer
+                    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+                        <div class="flex flex-col h-full">
+                            <!-- Header -->
+                            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                                <div>
+                                    <h3 class="text-2xl font-semibold text-gray-800">${selectedItem.nom}</h3>
+                                    <p class="text-gray-600">${selectedItem.categorie} • ${selectedItem.quantite} ${selectedItem.unite} disponible</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button onclick="enableEditMode()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                                        <span>✏️</span><span>Modifier</span>
+                                    </button>
+                                    <button onclick="duplicateItem(${selectedItem.id})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2">
+                                        <span>📋</span><span>Dupliquer</span>
+                                    </button>
+                                    <button onclick="closeItemDetail()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                        Fermer
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Onglets -->
+                            <div class="border-b border-gray-200">
+                                <div class="flex space-x-0">
+                                    <button onclick="setActiveTab('general')" class="px-6 py-3 border-b-2 font-medium text-sm ${activeTab === 'general' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        📋 Général
+                                    </button>
+                                    <button onclick="setActiveTab('nomenclatures')" class="px-6 py-3 border-b-2 font-medium text-sm ${activeTab === 'nomenclatures' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        🔧 Nomenclatures
+                                    </button>
+                                    <button onclick="setActiveTab('variantes')" class="px-6 py-3 border-b-2 font-medium text-sm ${activeTab === 'variantes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        🎨 Variantes
+                                    </button>
+                                    <button onclick="setActiveTab('fournisseurs')" class="px-6 py-3 border-b-2 font-medium text-sm ${activeTab === 'fournisseurs' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        🏪 Fournisseurs
+                                    </button>
+                                    <button onclick="setActiveTab('stocks')" class="px-6 py-3 border-b-2 font-medium text-sm ${activeTab === 'stocks' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+                                        📊 Stocks & Coûts
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Contenu des onglets -->
+                            <div class="flex-1 p-6">
+                                ${renderTabContent(activeTab)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scripts pour la gestion des onglets -->
+                <script>
+                    function setActiveTab(tab) {
+                        // Mise à jour de l'onglet actif et re-render
+                        const event = new CustomEvent('tabChange', { detail: { tab: tab, itemId: ${selectedItem.id} } });
+                        document.dispatchEvent(event);
+                    }
+                    
+                    function enableEditMode() {
+                        // Activer le mode édition
+                        const event = new CustomEvent('enableEdit', { detail: { itemId: ${selectedItem.id} } });
+                        document.dispatchEvent(event);
+                    }
+                    
+                    // Écouter les événements personnalisés
+                    document.addEventListener('tabChange', function(e) {
+                        activeTab = e.detail.tab;
+                        renderApp();
+                    });
+                    
+                    document.addEventListener('enableEdit', function(e) {
+                        editMode = true;
+                        renderApp();
+                    });
+                </script>
+            `;
+        }
+
+        function renderTabContent(activeTab) {
+            switch(activeTab) {
+                case 'general':
+                    return renderGeneralTab();
+                case 'nomenclatures':
+                    return renderNomenclaturesTab();
+                case 'variantes':
+                    return renderVariantesTab();
+                case 'fournisseurs':
+                    return renderFournisseursTab();
+                case 'stocks':
+                    return renderStocksTab();
+                default:
+                    return renderGeneralTab();
+            }
+        }
+
+        function renderGeneralTab() {
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Informations de base -->
+                    <div class="space-y-6">
+                        <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Informations Générales</h4>
+                        
+                        <form id="editGeneralForm" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom du produit</label>
+                                    <input type="text" value="${selectedItem.nom}" name="nom" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                                    <select name="categorie" class="w-full p-3 border border-gray-300 rounded-lg">
+                                        <option value="Matière Première" ${selectedItem.categorie === 'Matière Première' ? 'selected' : ''}>Matière Première</option>
+                                        <option value="Composants" ${selectedItem.categorie === 'Composants' ? 'selected' : ''}>Composants</option>
+                                        <option value="Finition" ${selectedItem.categorie === 'Finition' ? 'selected' : ''}>Finition</option>
+                                        <option value="Produit Fini" ${selectedItem.categorie === 'Produit Fini' ? 'selected' : ''}>Produit Fini</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Stock actuel</label>
+                                    <input type="number" value="${selectedItem.quantite}" name="quantite" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Unité</label>
+                                    <input type="text" value="${selectedItem.unite}" name="unite" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix unitaire</label>
+                                    <input type="number" step="0.01" value="${selectedItem.prixUnitaire}" name="prixUnitaire" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <textarea name="description" rows="3" class="w-full p-3 border border-gray-300 rounded-lg">${selectedItem.description || ''}</textarea>
+                            </div>
+                            
+                            <div class="flex space-x-3">
+                                <button type="button" onclick="saveGeneralChanges()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                    Sauvegarder
+                                </button>
+                                <button type="button" onclick="resetGeneralForm()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    Annuler
                                 </button>
                             </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Attributs et statut -->
+                    <div class="space-y-6">
+                        <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Attributs & Statut</h4>
+                        
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h5 class="font-medium text-gray-800 mb-3">Attributs configurables</h5>
+                            <div class="space-y-2">
+                                ${selectedItem.attributs?.map(attr => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-700">${attr}</span>
+                                        <button onclick="removeAttribute('${attr}')" class="text-red-600 hover:text-red-800 text-sm">Supprimer</button>
+                                    </div>
+                                `).join('') || '<p class="text-gray-500">Aucun attribut défini</p>'}
+                            </div>
+                            <div class="mt-3 flex space-x-2">
+                                <input type="text" id="newAttribute" placeholder="Nouvel attribut" class="flex-1 p-2 border border-gray-300 rounded text-sm" />
+                                <button onclick="addAttribute()" class="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Ajouter</button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">Valeur totale</p>
+                                <p class="text-2xl font-bold text-blue-600">${selectedItem.valeur.toLocaleString()}$</p>
+                            </div>
+                            <div class="bg-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">Statut stock</p>
+                                <p class="text-lg font-bold text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-600">
+                                    ${selectedItem.quantite <= selectedItem.seuilMin ? '⚠️ Stock Bas' : '✅ Stock OK'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <!-- Informations générales -->
-                                <div class="space-y-6">
-                                    <div>
-                                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Informations Générales</h4>
-                                        <div class="space-y-3">
-                                            <p><strong>Nom:</strong> ${selectedItem.nom}</p>
-                                            <p><strong>Catégorie:</strong> ${selectedItem.categorie}</p>
-                                            <p><strong>Stock:</strong> ${selectedItem.quantite} ${selectedItem.unite}</p>
-                                            <p><strong>Prix unitaire:</strong> ${selectedItem.prixUnitaire}$</p>
-                                            <p><strong>Valeur totale:</strong> ${selectedItem.valeur.toLocaleString()}$</p>
-                                            <p><strong>Description:</strong> ${selectedItem.description || 'Aucune description'}</p>
+        function renderNomenclaturesTab() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Nomenclatures (BoM)</h4>
+                        <button onclick="addNomenclature()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2">
+                            <span>➕</span><span>Nouvelle Nomenclature</span>
+                        </button>
+                    </div>
+                    
+                    ${selectedItem.nomenclatures?.length > 0 ? `
+                        <div class="space-y-4">
+                            ${selectedItem.nomenclatures.map((nomenclature, index) => `
+                                <div class="border rounded-lg ${nomenclature.active ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-white'}">
+                                    <div class="p-4 border-b border-gray-200">
+                                        <div class="flex justify-between items-center">
+                                            <div class="flex items-center space-x-4">
+                                                <h5 class="font-semibold text-gray-800">${nomenclature.nom}</h5>
+                                                <span class="px-2 py-1 rounded text-xs ${nomenclature.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
+                                                    ${nomenclature.active ? 'Active' : 'Inactive'}
+                                                </span>
+                                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">${nomenclature.type}</span>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <button onclick="toggleNomenclature(${nomenclature.id})" class="px-3 py-1 text-sm ${nomenclature.active ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'} rounded">
+                                                    ${nomenclature.active ? 'Désactiver' : 'Activer'}
+                                                </button>
+                                                <button onclick="deleteNomenclature(${nomenclature.id})" class="px-3 py-1 text-sm bg-red-100 text-red-800 hover:bg-red-200 rounded">Supprimer</button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 grid grid-cols-3 gap-4 text-sm">
+                                            <div>
+                                                <span class="text-gray-600">Coût total: </span>
+                                                <span class="font-semibold">${nomenclature.coutTotal?.toFixed(2)}$</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600">Temps production: </span>
+                                                <span class="font-semibold">${nomenclature.tempsProduction}h</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600">Composants: </span>
+                                                <span class="font-semibold">${nomenclature.composants?.length || 0}</span>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <!-- Fournisseurs -->
-                                    <div>
-                                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Fournisseurs</h4>
-                                        <div class="space-y-2">
-                                            ${selectedItem.fournisseurs?.map(f => `
-                                                <div class="border rounded-lg p-3 bg-gray-50">
-                                                    <p class="font-medium">${f.nom}</p>
-                                                    <p class="text-sm text-gray-600">${f.prix}$ - Délai: ${f.delai}</p>
-                                                </div>
-                                            `).join('') || '<p class="text-gray-500">Aucun fournisseur défini</p>'}
+                                    
+                                    <!-- Liste des composants -->
+                                    <div class="p-4">
+                                        <h6 class="font-medium text-gray-700 mb-3">Composants requis</h6>
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full text-sm">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th class="text-left p-2">Composant</th>
+                                                        <th class="text-left p-2">Quantité</th>
+                                                        <th class="text-left p-2">Unité</th>
+                                                        <th class="text-left p-2">Coût</th>
+                                                        <th class="text-left p-2">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${nomenclature.composants?.map((composant, compIndex) => `
+                                                        <tr class="border-t">
+                                                            <td class="p-2 font-medium">${composant.composant}</td>
+                                                            <td class="p-2">${composant.quantite}</td>
+                                                            <td class="p-2">${composant.unite}</td>
+                                                            <td class="p-2">${composant.cout?.toFixed(2)}$</td>
+                                                            <td class="p-2">
+                                                                <button onclick="removeComposant(${nomenclature.id}, ${compIndex})" class="text-red-600 hover:text-red-800">🗑️</button>
+                                                            </td>
+                                                        </tr>
+                                                    `).join('') || '<tr><td colspan="5" class="p-2 text-gray-500 text-center">Aucun composant défini</td></tr>'}
+                                                </tbody>
+                                            </table>
                                         </div>
+                                        <button onclick="addComposant(${nomenclature.id})" class="mt-3 px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm hover:bg-blue-200">
+                                            + Ajouter Composant
+                                        </button>
                                     </div>
                                 </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="text-center py-12">
+                            <div class="text-6xl text-gray-300 mb-4">🔧</div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune nomenclature définie</h3>
+                            <p class="text-gray-500 mb-6">Créez une nomenclature pour définir les composants nécessaires à la fabrication de ce produit.</p>
+                            <button onclick="addNomenclature()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                Créer la première nomenclature
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
 
-                                <!-- Recette -->
-                                <div>
-                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Recette/Nomenclature</h4>
-                                    ${selectedItem.recette?.length > 0 ? `
-                                        <div class="space-y-2">
-                                            ${selectedItem.recette.map(c => `
-                                                <div class="border rounded-lg p-3 bg-blue-50">
-                                                    <p class="font-medium">${c.composant}</p>
-                                                    <p class="text-sm text-gray-600">${c.quantite} ${c.unite}</p>
-                                                </div>
-                                            `).join('')}
+        function renderVariantesTab() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Variantes de produit</h4>
+                        <button onclick="addVariante()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2">
+                            <span>➕</span><span>Nouvelle Variante</span>
+                        </button>
+                    </div>
+                    
+                    ${selectedItem.variantes?.length > 0 ? `
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            ${selectedItem.variantes.map(variante => `
+                                <div class="border rounded-lg p-6 hover:shadow-md transition-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h5 class="font-semibold text-gray-800">${variante.nom}</h5>
+                                            <div class="mt-2 space-y-1">
+                                                ${Object.entries(variante.attributs || {}).map(([key, value]) => `
+                                                    <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs mr-2">
+                                                        ${key}: ${value}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
                                         </div>
-                                    ` : '<p class="text-gray-500">Aucun composant défini</p>'}
+                                        <div class="flex space-x-1">
+                                            <button onclick="deleteVariante(${variante.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                                        </div>
+                                    </div>
                                     
-                                    <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                                        <h5 class="font-semibold text-gray-800 mb-2">Statut</h5>
-                                        <span class="px-3 py-1 rounded-full text-sm font-medium ${selectedItem.quantite <= selectedItem.seuilMin ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
-                                            ${selectedItem.quantite <= selectedItem.seuilMin ? 'Stock Bas - Réapprovisionner' : 'Stock Suffisant'}
-                                        </span>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">Stock: </span>
+                                            <span class="font-semibold ${variante.stock <= 5 ? 'text-red-600' : 'text-green-600'}">${variante.stock} ${selectedItem.unite}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Prix: </span>
+                                            <span class="font-semibold text-green-600">${variante.prix}$</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4 flex space-x-2">
+                                        <button onclick="adjustStock(${variante.id}, 'add')" class="px-3 py-1 bg-green-100 text-green-800 rounded text-sm hover:bg-green-200">+ Stock</button>
+                                        <button onclick="adjustStock(${variante.id}, 'remove')" class="px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200">- Stock</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="text-center py-12">
+                            <div class="text-6xl text-gray-300 mb-4">🎨</div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune variante définie</h3>
+                            <p class="text-gray-500 mb-6">Créez des variantes pour ce produit (couleurs, tailles, finitions, etc.)</p>
+                            <button onclick="addVariante()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                Créer la première variante
+                            </button>
+                        </div>
+                    `}
+                    
+                    <!-- Résumé des variantes -->
+                    ${selectedItem.variantes?.length > 0 ? `
+                        <div class="mt-8 bg-gray-50 rounded-lg p-6">
+                            <h5 class="font-semibold text-gray-800 mb-4">Résumé des variantes</h5>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <p class="text-gray-600">Total variantes</p>
+                                    <p class="text-2xl font-bold text-blue-600">${selectedItem.variantes.length}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Stock total</p>
+                                    <p class="text-2xl font-bold text-green-600">${selectedItem.variantes.reduce((sum, v) => sum + v.stock, 0)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Prix min</p>
+                                    <p class="text-2xl font-bold text-purple-600">${Math.min(...selectedItem.variantes.map(v => v.prix))}$</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Prix max</p>
+                                    <p class="text-2xl font-bold text-purple-600">${Math.max(...selectedItem.variantes.map(v => v.prix))}$</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderFournisseursTab() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Fournisseurs</h4>
+                        <button onclick="addFournisseur()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                            <span>➕</span><span>Nouveau Fournisseur</span>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        ${selectedItem.fournisseurs?.map((fournisseur, index) => `
+                            <div class="border rounded-lg p-6 ${index === 0 ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-800">${fournisseur.nom}</h5>
+                                        ${index === 0 ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Fournisseur Principal</span>' : ''}
+                                    </div>
+                                    <div class="flex space-x-1">
+                                        ${index !== 0 ? `<button onclick="setMainSupplier(${index})" class="text-green-600 hover:text-green-800" title="Définir comme principal">⭐</button>` : ''}
+                                        ${selectedItem.fournisseurs.length > 1 ? `<button onclick="deleteFournisseur(${index})" class="text-red-600 hover:text-red-800">🗑️</button>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-3 text-sm">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span class="text-gray-600">Prix: </span>
+                                            <span class="font-semibold text-green-600">${fournisseur.prix}$ / ${selectedItem.unite}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Délai: </span>
+                                            <span class="font-semibold">${fournisseur.delai}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pt-3 border-t border-gray-200">
+                                        <button onclick="createPurchaseOrder(${index})" class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-2">
+                                            📦 Créer commande
+                                        </button>
+                                        <button onclick="viewSupplierHistory(${index})" class="px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">
+                                            📊 Historique
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Comparaison des fournisseurs -->
+                    ${selectedItem.fournisseurs?.length > 1 ? `
+                        <div class="mt-8">
+                            <h5 class="font-semibold text-gray-800 mb-4">Comparaison des fournisseurs</h5>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full border border-gray-200 rounded-lg">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="text-left p-3 font-medium">Fournisseur</th>
+                                            <th class="text-left p-3 font-medium">Prix</th>
+                                            <th class="text-left p-3 font-medium">Délai</th>
+                                            <th class="text-left p-3 font-medium">Économies</th>
+                                            <th class="text-left p-3 font-medium">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${selectedItem.fournisseurs.map((fournisseur, index) => {
+                                            const prixMin = Math.min(...selectedItem.fournisseurs.map(f => f.prix));
+                                            const economies = fournisseur.prix - prixMin;
+                                            return `
+                                                <tr class="border-t ${index === 0 ? 'bg-blue-50' : ''}">
+                                                    <td class="p-3">
+                                                        ${fournisseur.nom}
+                                                        ${index === 0 ? '<span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Principal</span>' : ''}
+                                                    </td>
+                                                    <td class="p-3 font-semibold ${fournisseur.prix === prixMin ? 'text-green-600' : ''}">${fournisseur.prix}$</td>
+                                                    <td class="p-3">${fournisseur.delai}</td>
+                                                    <td class="p-3">
+                                                        ${economies === 0 ? 
+                                                            '<span class="text-green-600 font-semibold">Meilleur prix</span>' : 
+                                                            `<span class="text-red-600">+${economies.toFixed(2)}$</span>`
+                                                        }
+                                                    </td>
+                                                    <td class="p-3">
+                                                        ${index !== 0 && fournisseur.prix === prixMin ? 
+                                                            '<button onclick="setMainSupplier(' + index + ')" class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs hover:bg-green-200">Choisir</button>' : 
+                                                            ''
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderStocksTab() {
+            const stockVariantes = selectedItem.variantes?.reduce((sum, v) => sum + v.stock, 0) || 0;
+            const stockTotal = selectedItem.quantite + stockVariantes;
+            
+            return `
+                <div class="space-y-6">
+                    <h4 class="text-lg font-semibold text-gray-800">Gestion des Stocks & Coûts</h4>
+                    
+                    <!-- KPIs Stocks -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                            <h5 class="font-medium text-blue-800">Stock Principal</h5>
+                            <p class="text-2xl font-bold text-blue-600">${selectedItem.quantite}</p>
+                            <p class="text-sm text-blue-600">${selectedItem.unite}</p>
+                        </div>
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                            <h5 class="font-medium text-purple-800">Stock Variantes</h5>
+                            <p class="text-2xl font-bold text-purple-600">${stockVariantes}</p>
+                            <p class="text-sm text-purple-600">${selectedItem.unite}</p>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                            <h5 class="font-medium text-green-800">Stock Total</h5>
+                            <p class="text-2xl font-bold text-green-600">${stockTotal}</p>
+                            <p class="text-sm text-green-600">${selectedItem.unite}</p>
+                        </div>
+                        <div class="bg-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-50 border border-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-200 rounded-lg p-6">
+                            <h5 class="font-medium text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-800">Statut</h5>
+                            <p class="text-lg font-bold text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-600">
+                                ${selectedItem.quantite <= selectedItem.seuilMin ? 'Stock Bas' : 'Stock OK'}
+                            </p>
+                            <p class="text-sm text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-600">Seuil: ${selectedItem.seuilMin}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Ajustements de stock -->
+                    <div class="bg-white border rounded-lg p-6">
+                        <h5 class="font-semibold text-gray-800 mb-4">Ajustements de Stock</h5>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Type d'ajustement</label>
+                                <select id="adjustmentType" class="w-full p-3 border border-gray-300 rounded-lg">
+                                    <option value="manual">Ajustement manuel</option>
+                                    <option value="reception">Réception marchandise</option>
+                                    <option value="production">Production interne</option>
+                                    <option value="perte">Perte/Casse</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Quantité</label>
+                                <input type="number" id="adjustmentQuantity" placeholder="Quantité à ajouter/retirer" class="w-full p-3 border border-gray-300 rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Action</label>
+                                <div class="flex space-x-2">
+                                    <button onclick="adjustStock('add')" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Ajouter</button>
+                                    <button onclick="adjustStock('remove')" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">- Retirer</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Motif (optionnel)</label>
+                            <input type="text" id="adjustmentReason" placeholder="Raison de l'ajustement" class="w-full p-3 border border-gray-300 rounded-lg" />
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+            return `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Informations de base -->
+                    <div class="space-y-6">
+                        <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Informations Générales</h4>
+                        
+                        <form id="editGeneralForm" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom du produit</label>
+                                    <input type="text" value="${selectedItem.nom}" name="nom" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                                    <select name="categorie" class="w-full p-3 border border-gray-300 rounded-lg">
+                                        <option value="Matière Première" ${selectedItem.categorie === 'Matière Première' ? 'selected' : ''}>Matière Première</option>
+                                        <option value="Composants" ${selectedItem.categorie === 'Composants' ? 'selected' : ''}>Composants</option>
+                                        <option value="Finition" ${selectedItem.categorie === 'Finition' ? 'selected' : ''}>Finition</option>
+                                        <option value="Produit Fini" ${selectedItem.categorie === 'Produit Fini' ? 'selected' : ''}>Produit Fini</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Stock actuel</label>
+                                    <input type="number" value="${selectedItem.quantite}" name="quantite" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Unité</label>
+                                    <input type="text" value="${selectedItem.unite}" name="unite" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Prix unitaire</label>
+                                    <input type="number" step="0.01" value="${selectedItem.prixUnitaire}" name="prixUnitaire" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <textarea name="description" rows="3" class="w-full p-3 border border-gray-300 rounded-lg">${selectedItem.description || ''}</textarea>
+                            </div>
+                            
+                            <div class="flex space-x-3">
+                                <button type="button" onclick="saveGeneralChanges()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                    Sauvegarder
+                                </button>
+                                <button type="button" onclick="resetGeneralForm()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Attributs et statut -->
+                    <div class="space-y-6">
+                        <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Attributs & Statut</h4>
+                        
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h5 class="font-medium text-gray-800 mb-3">Attributs configurables</h5>
+                            <div class="space-y-2">
+                                ${selectedItem.attributs?.map(attr => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-700">${attr}</span>
+                                        <button onclick="removeAttribute('${attr}')" class="text-red-600 hover:text-red-800 text-sm">Supprimer</button>
+                                    </div>
+                                `).join('') || '<p class="text-gray-500">Aucun attribut défini</p>'}
+                            </div>
+                            <div class="mt-3 flex space-x-2">
+                                <input type="text" id="newAttribute" placeholder="Nouvel attribut" class="flex-1 p-2 border border-gray-300 rounded text-sm" />
+                                <button onclick="addAttribute()" class="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Ajouter</button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">Valeur totale</p>
+                                <p class="text-2xl font-bold text-blue-600">${selectedItem.valeur.toLocaleString()}$</p>
+                            </div>
+                            <div class="bg-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">Statut stock</p>
+                                <p class="text-lg font-bold text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-600">
+                                    ${selectedItem.quantite <= selectedItem.seuilMin ? '⚠️ Stock Bas' : '✅ Stock OK'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNomenclaturesTab() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Nomenclatures (BoM)</h4>
+                        <button onclick="addNomenclature()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2">
+                            <span>➕</span><span>Nouvelle Nomenclature</span>
+                        </button>
+                    </div>
+                    
+                    ${selectedItem.nomenclatures?.length > 0 ? `
+                        <div class="space-y-4">
+                            ${selectedItem.nomenclatures.map((nomenclature, index) => `
+                                <div class="border rounded-lg ${nomenclature.active ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-white'}">
+                                    <div class="p-4 border-b border-gray-200">
+                                        <div class="flex justify-between items-center">
+                                            <div class="flex items-center space-x-4">
+                                                <h5 class="font-semibold text-gray-800">${nomenclature.nom}</h5>
+                                                <span class="px-2 py-1 rounded text-xs ${nomenclature.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
+                                                    ${nomenclature.active ? 'Active' : 'Inactive'}
+                                                </span>
+                                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">${nomenclature.type}</span>
+                                            </div>
+                                            <div class="flex space-x-2">
+                                                <button onclick="toggleNomenclature(${nomenclature.id})" class="px-3 py-1 text-sm ${nomenclature.active ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-green-100 text-green-800 hover:bg-green-200'} rounded">
+                                                    ${nomenclature.active ? 'Désactiver' : 'Activer'}
+                                                </button>
+                                                <button onclick="editNomenclature(${nomenclature.id})" class="px-3 py-1 text-sm bg-blue-100 text-blue-800 hover:bg-blue-200 rounded">Modifier</button>
+                                                <button onclick="deleteNomenclature(${nomenclature.id})" class="px-3 py-1 text-sm bg-red-100 text-red-800 hover:bg-red-200 rounded">Supprimer</button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 grid grid-cols-3 gap-4 text-sm">
+                                            <div>
+                                                <span class="text-gray-600">Coût total: </span>
+                                                <span class="font-semibold">${nomenclature.coutTotal?.toFixed(2)}$</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600">Temps production: </span>
+                                                <span class="font-semibold">${nomenclature.tempsProduction}h</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600">Composants: </span>
+                                                <span class="font-semibold">${nomenclature.composants?.length || 0}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Liste des composants -->
+                                    <div class="p-4">
+                                        <h6 class="font-medium text-gray-700 mb-3">Composants requis</h6>
+                                        <div class="overflow-x-auto">
+                                            <table class="min-w-full text-sm">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th class="text-left p-2">Composant</th>
+                                                        <th class="text-left p-2">Quantité</th>
+                                                        <th class="text-left p-2">Unité</th>
+                                                        <th class="text-left p-2">Coût</th>
+                                                        <th class="text-left p-2">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${nomenclature.composants?.map((composant, compIndex) => `
+                                                        <tr class="border-t">
+                                                            <td class="p-2 font-medium">${composant.composant}</td>
+                                                            <td class="p-2">${composant.quantite}</td>
+                                                            <td class="p-2">${composant.unite}</td>
+                                                            <td class="p-2">${composant.cout?.toFixed(2)}$</td>
+                                                            <td class="p-2">
+                                                                <button onclick="editComposant(${nomenclature.id}, ${compIndex})" class="text-blue-600 hover:text-blue-800 mr-2">✏️</button>
+                                                                <button onclick="removeComposant(${nomenclature.id}, ${compIndex})" class="text-red-600 hover:text-red-800">🗑️</button>
+                                                            </td>
+                                                        </tr>
+                                                    `).join('') || '<tr><td colspan="5" class="p-2 text-gray-500 text-center">Aucun composant défini</td></tr>'}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button onclick="addComposant(${nomenclature.id})" class="mt-3 px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm hover:bg-blue-200">
+                                            + Ajouter Composant
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="text-center py-12">
+                            <div class="text-6xl text-gray-300 mb-4">🔧</div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune nomenclature définie</h3>
+                            <p class="text-gray-500 mb-6">Créez une nomenclature pour définir les composants nécessaires à la fabrication de ce produit.</p>
+                            <button onclick="addNomenclature()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                Créer la première nomenclature
+                            </button>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderVariantesTab() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Variantes de produit</h4>
+                        <button onclick="addVariante()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2">
+                            <span>➕</span><span>Nouvelle Variante</span>
+                        </button>
+                    </div>
+                    
+                    ${selectedItem.variantes?.length > 0 ? `
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            ${selectedItem.variantes.map(variante => `
+                                <div class="border rounded-lg p-6 hover:shadow-md transition-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h5 class="font-semibold text-gray-800">${variante.nom}</h5>
+                                            <div class="mt-2 space-y-1">
+                                                ${Object.entries(variante.attributs || {}).map(([key, value]) => `
+                                                    <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs mr-2">
+                                                        ${key}: ${value}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-1">
+                                            <button onclick="editVariante(${variante.id})" class="text-blue-600 hover:text-blue-800">✏️</button>
+                                            <button onclick="deleteVariante(${variante.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">Stock: </span>
+                                            <span class="font-semibold ${variante.stock <= 5 ? 'text-red-600' : 'text-green-600'}">${variante.stock} ${selectedItem.unite}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Prix: </span>
+                                            <span class="font-semibold text-green-600">${variante.prix}$</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4 flex space-x-2">
+                                        <button onclick="adjustStock(${variante.id}, 'add')" class="px-3 py-1 bg-green-100 text-green-800 rounded text-sm hover:bg-green-200">+ Stock</button>
+                                        <button onclick="adjustStock(${variante.id}, 'remove')" class="px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200">- Stock</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="text-center py-12">
+                            <div class="text-6xl text-gray-300 mb-4">🎨</div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune variante définie</h3>
+                            <p class="text-gray-500 mb-6">Créez des variantes pour ce produit (couleurs, tailles, finitions, etc.)</p>
+                            <button onclick="addVariante()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                Créer la première variante
+                            </button>
+                        </div>
+                    `}
+                    
+                    <!-- Résumé des variantes -->
+                    ${selectedItem.variantes?.length > 0 ? `
+                        <div class="mt-8 bg-gray-50 rounded-lg p-6">
+                            <h5 class="font-semibold text-gray-800 mb-4">Résumé des variantes</h5>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <p class="text-gray-600">Total variantes</p>
+                                    <p class="text-2xl font-bold text-blue-600">${selectedItem.variantes.length}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Stock total</p>
+                                    <p class="text-2xl font-bold text-green-600">${selectedItem.variantes.reduce((sum, v) => sum + v.stock, 0)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Prix min</p>
+                                    <p class="text-2xl font-bold text-purple-600">${Math.min(...selectedItem.variantes.map(v => v.prix))}$</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Prix max</p>
+                                    <p class="text-2xl font-bold text-purple-600">${Math.max(...selectedItem.variantes.map(v => v.prix))}$</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderFournisseursTab() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Fournisseurs</h4>
+                        <button onclick="addFournisseur()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                            <span>➕</span><span>Nouveau Fournisseur</span>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        ${selectedItem.fournisseurs?.map((fournisseur, index) => `
+                            <div class="border rounded-lg p-6 ${index === 0 ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-800">${fournisseur.nom}</h5>
+                                        ${index === 0 ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Fournisseur Principal</span>' : ''}
+                                    </div>
+                                    <div class="flex space-x-1">
+                                        ${index !== 0 ? `<button onclick="setMainSupplier(${index})" class="text-green-600 hover:text-green-800" title="Définir comme principal">⭐</button>` : ''}
+                                        <button onclick="editFournisseur(${index})" class="text-blue-600 hover:text-blue-800">✏️</button>
+                                        ${selectedItem.fournisseurs.length > 1 ? `<button onclick="deleteFournisseur(${index})" class="text-red-600 hover:text-red-800">🗑️</button>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-3 text-sm">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span class="text-gray-600">Prix: </span>
+                                            <span class="font-semibold text-green-600">${fournisseur.prix}$ / ${selectedItem.unite}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Délai: </span>
+                                            <span class="font-semibold">${fournisseur.delai}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pt-3 border-t border-gray-200">
+                                        <button onclick="createPurchaseOrder(${index})" class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-2">
+                                            📦 Créer commande
+                                        </button>
+                                        <button onclick="viewSupplierHistory(${index})" class="px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">
+                                            📊 Historique
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Comparaison des fournisseurs -->
+                    ${selectedItem.fournisseurs?.length > 1 ? `
+                        <div class="mt-8">
+                            <h5 class="font-semibold text-gray-800 mb-4">Comparaison des fournisseurs</h5>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full border border-gray-200 rounded-lg">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="text-left p-3 font-medium">Fournisseur</th>
+                                            <th class="text-left p-3 font-medium">Prix</th>
+                                            <th class="text-left p-3 font-medium">Délai</th>
+                                            <th class="text-left p-3 font-medium">Économies</th>
+                                            <th class="text-left p-3 font-medium">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${selectedItem.fournisseurs.map((fournisseur, index) => {
+                                            const prixMin = Math.min(...selectedItem.fournisseurs.map(f => f.prix));
+                                            const economies = fournisseur.prix - prixMin;
+                                            return `
+                                                <tr class="border-t ${index === 0 ? 'bg-blue-50' : ''}">
+                                                    <td class="p-3">
+                                                        ${fournisseur.nom}
+                                                        ${index === 0 ? '<span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Principal</span>' : ''}
+                                                    </td>
+                                                    <td class="p-3 font-semibold ${fournisseur.prix === prixMin ? 'text-green-600' : ''}">${fournisseur.prix}$</td>
+                                                    <td class="p-3">${fournisseur.delai}</td>
+                                                    <td class="p-3">
+                                                        ${economies === 0 ? 
+                                                            '<span class="text-green-600 font-semibold">Meilleur prix</span>' : 
+                                                            `<span class="text-red-600">+${economies.toFixed(2)}$</span>`
+                                                        }
+                                                    </td>
+                                                    <td class="p-3">
+                                                        ${index !== 0 && fournisseur.prix === prixMin ? 
+                                                            '<button onclick="setMainSupplier(' + index + ')" class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs hover:bg-green-200">Choisir</button>' : 
+                                                            ''
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderStocksTab() {
+            const stockVariantes = selectedItem.variantes?.reduce((sum, v) => sum + v.stock, 0) || 0;
+            const stockTotal = selectedItem.quantite + stockVariantes;
+            
+            return `
+                <div class="space-y-6">
+                    <h4 class="text-lg font-semibold text-gray-800">Gestion des Stocks & Coûts</h4>
+                    
+                    <!-- KPIs Stocks -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                            <h5 class="font-medium text-blue-800">Stock Principal</h5>
+                            <p class="text-2xl font-bold text-blue-600">${selectedItem.quantite}</p>
+                            <p class="text-sm text-blue-600">${selectedItem.unite}</p>
+                        </div>
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                            <h5 class="font-medium text-purple-800">Stock Variantes</h5>
+                            <p class="text-2xl font-bold text-purple-600">${stockVariantes}</p>
+                            <p class="text-sm text-purple-600">${selectedItem.unite}</p>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                            <h5 class="font-medium text-green-800">Stock Total</h5>
+                            <p class="text-2xl font-bold text-green-600">${stockTotal}</p>
+                            <p class="text-sm text-green-600">${selectedItem.unite}</p>
+                        </div>
+                        <div class="bg-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-50 border border-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-200 rounded-lg p-6">
+                            <h5 class="font-medium text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-800">Statut</h5>
+                            <p class="text-lg font-bold text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-600">
+                                ${selectedItem.quantite <= selectedItem.seuilMin ? 'Stock Bas' : 'Stock OK'}
+                            </p>
+                            <p class="text-sm text-${selectedItem.quantite <= selectedItem.seuilMin ? 'red' : 'green'}-600">Seuil: ${selectedItem.seuilMin}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Ajustements de stock -->
+                    <div class="bg-white border rounded-lg p-6">
+                        <h5 class="font-semibold text-gray-800 mb-4">Ajustements de Stock</h5>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Type d'ajustement</label>
+                                <select id="adjustmentType" class="w-full p-3 border border-gray-300 rounded-lg">
+                                    <option value="manual">Ajustement manuel</option>
+                                    <option value="reception">Réception marchandise</option>
+                                    <option value="production">Production interne</option>
+                                    <option value="perte">Perte/Casse</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Quantité</label>
+                                <input type="number" id="adjustmentQuantity" placeholder="Quantité à ajouter/retirer" class="w-full p-3 border border-gray-300 rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Action</label>
+                                <div class="flex space-x-2">
+                                    <button onclick="adjustStock('add')" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Ajouter</button>
+                                    <button onclick="adjustStock('remove')" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">- Retirer</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Motif (optionnel)</label>
+                            <input type="text" id="adjustmentReason" placeholder="Raison de l'ajustement" class="w-full p-3 border border-gray-300 rounded-lg" />
+                        </div>
+                    </div>
+                    
+                    <!-- Analyse des coûts -->
+                    <div class="bg-white border rounded-lg p-6">
+                        <h5 class="font-semibold text-gray-800 mb-4">Analyse des Coûts</h5>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h6 class="font-medium text-gray-700 mb-3">Coûts de revient</h6>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Prix d'achat unitaire:</span>
+                                        <span class="font-semibold">${selectedItem.prixUnitaire}$</span>
+                                    </div>
+                                    ${selectedItem.nomenclatures?.find(n => n.active) ? `
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Coût production unitaire:</span>
+                                            <span class="font-semibold">${(selectedItem.nomenclatures.find(n => n.active).coutTotal || 0).toFixed(2)}$</span>
+                                        </div>
+                                    ` : ''}
+                                    <div class="flex justify-between border-t pt-2">
+                                        <span class="text-gray-600">Valeur stock total:</span>
+                                        <span class="font-bold text-green-600">${selectedItem.valeur.toLocaleString()}$</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h6 class="font-medium text-gray-700 mb-3">Recommandations</h6>
+                                <div class="space-y-2 text-sm">
+                                    ${selectedItem.quantite <= selectedItem.seuilMin ? 
+                                        '<div class="p-3 bg-red-50 border border-red-200 rounded text-red-700">⚠️ Réapprovisionner rapidement</div>' : 
+                                        '<div class="p-3 bg-green-50 border border-green-200 rounded text-green-700">✅ Stock suffisant</div>'
+                                    }
+                                    ${selectedItem.fournisseurs?.length > 1 ? 
+                                        '<div class="p-3 bg-blue-50 border border-blue-200 rounded text-blue-700">💡 Comparer les fournisseurs pour optimiser les coûts</div>' : 
+                                        '<div class="p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-700">💡 Ajouter d\'autres fournisseurs pour réduire les risques</div>'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Historique des mouvements -->
+                    <div class="bg-white border rounded-lg p-6">
+                        <h5 class="font-semibold text-gray-800 mb-4">Historique des Mouvements (Simulation)</h5>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left p-3">Date</th>
+                                        <th class="text-left p-3">Type</th>
+                                        <th class="text-left p-3">Quantité</th>
+                                        <th class="text-left p-3">Stock après</th>
+                                        <th class="text-left p-3">Motif</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-t">
+                                        <td class="p-3">2025-08-30</td>
+                                        <td class="p-3"><span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Réception</span></td>
+                                        <td class="p-3 text-green-600">+50</td>
+                                        <td class="p-3">${selectedItem.quantite}</td>
+                                        <td class="p-3">Commande #CMD-2025-0830</td>
+                                    </tr>
+                                    <tr class="border-t">
+                                        <td class="p-3">2025-08-28</td>
+                                        <td class="p-3"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Production</span></td>
+                                        <td class="p-3 text-red-600">-25</td>
+                                        <td class="p-3">${selectedItem.quantite - 50}</td>
+                                        <td class="p-3">OF-2025-0828 - Chaise Bureau Premium</td>
+                                    </tr>
+                                    <tr class="border-t">
+                                        <td class="p-3">2025-08-25</td>
+                                        <td class="p-3"><span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Ajustement</span></td>
+                                        <td class="p-3 text-red-600">-5</td>
+                                        <td class="p-3">${selectedItem.quantite - 25}</td>
+                                        <td class="p-3">Inventaire physique - Écart constaté</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -714,12 +2216,14 @@
         function openItemDetail(id) {
             selectedItem = inventaire.find(item => item.id === id);
             showItemDetail = true;
+            currentTab = 'general'; // Reset à l'onglet général
             renderApp();
         }
 
         function closeItemDetail() {
             showItemDetail = false;
             selectedItem = null;
+            currentTab = 'general';
             renderApp();
         }
 
