@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP Production</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Assurer que l'application prend toute la hauteur */
-        html, body, #root { height: 100%; margin: 0; padding: 0; }
+        html, body { height: 100%; margin: 0; padding: 0; }
     </style>
 </head>
 <body>
@@ -20,1327 +16,770 @@
         </div>
     </div>
     
-    <script type="text/babel">
-        const { useState, useMemo } = React;
-        
-        // Icônes simples en SVG (remplace Lucide pour éviter les problèmes de chargement)
-        const Icons = {
-            Package: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7l3-7z"/>
-                </svg>
-            ),
-            DollarSign: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="1" x2="12" y2="23"></line>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-            ),
-            Users: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-            ),
-            TrendingUp: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                    <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-            ),
-            BarChart3: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 3v18h18"></path>
-                    <path d="M18 17V9"></path>
-                    <path d="M13 17V5"></path>
-                    <path d="M8 17v-3"></path>
-                </svg>
-            ),
-            Wrench: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                </svg>
-            ),
-            ClipboardList: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                    <path d="M12 11h4"></path>
-                    <path d="M12 16h4"></path>
-                    <path d="M8 11h.01"></path>
-                    <path d="M8 16h.01"></path>
-                </svg>
-            ),
-            AlertTriangle: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-            ),
-            Clock: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12,6 12,12 16,14"></polyline>
-                </svg>
-            ),
-            Plus: () => (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-            ),
-            Eye: () => (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-            ),
-            Edit: () => (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-            ),
-            Trash2: () => (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3,6 5,6 21,6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                    <line x1="14" y1="11" x2="14" y2="17"></line>
-                </svg>
-            )
-        };
+    <script>
+        // Application ERP simplifiée et robuste
+        let activeModule = 'dashboard';
+        let showModal = false;
+        let modalType = '';
+        let selectedItem = null;
+        let showItemDetail = false;
 
-        const ERP_App = () => {
-            const [activeModule, setActiveModule] = useState('dashboard');
-            const [showModal, setShowModal] = useState(false);
-            const [modalType, setModalType] = useState('');
-            const [selectedItem, setSelectedItem] = useState(null);
-            const [showItemDetail, setShowItemDetail] = useState(false);
-            const [formData, setFormData] = useState({});
+        // Données initiales
+        let productions = [
+            {
+                id: 1,
+                produit: 'Chaise Bureau Premium',
+                quantite: 50,
+                statut: 'En cours',
+                dateDebut: '2025-08-25',
+                dateFin: '2025-09-05',
+                coutMatiere: 1250,
+                coutMainOeuvre: 800,
+                progression: 65
+            },
+            {
+                id: 2,
+                produit: 'Table Conférence XL',
+                quantite: 10,
+                statut: 'Planifié',
+                dateDebut: '2025-09-10',
+                dateFin: '2025-09-20',
+                coutMatiere: 2800,
+                coutMainOeuvre: 1200,
+                progression: 0
+            },
+            {
+                id: 3,
+                produit: 'Armoire Classement',
+                quantite: 25,
+                statut: 'Terminé',
+                dateDebut: '2025-08-10',
+                dateFin: '2025-08-30',
+                coutMatiere: 1875,
+                coutMainOeuvre: 750,
+                progression: 100
+            }
+        ];
 
-            // États pour les données
-            const [productions] = useState([
-                {
-                    id: 1,
-                    produit: 'Chaise Bureau Premium',
-                    quantite: 50,
-                    statut: 'En cours',
-                    dateDebut: '2025-08-25',
-                    dateFin: '2025-09-05',
-                    coutMatiere: 1250,
-                    coutMainOeuvre: 800,
-                    progression: 65
-                },
-                {
-                    id: 2,
-                    produit: 'Table Conférence XL',
-                    quantite: 10,
-                    statut: 'Planifié',
-                    dateDebut: '2025-09-10',
-                    dateFin: '2025-09-20',
-                    coutMatiere: 2800,
-                    coutMainOeuvre: 1200,
-                    progression: 0
-                },
-                {
-                    id: 3,
-                    produit: 'Armoire Classement',
-                    quantite: 25,
-                    statut: 'Terminé',
-                    dateDebut: '2025-08-10',
-                    dateFin: '2025-08-30',
-                    coutMatiere: 1875,
-                    coutMainOeuvre: 750,
-                    progression: 100
-                }
-            ]);
+        let inventaire = [
+            {
+                id: 1,
+                nom: 'Bois Chêne Premium',
+                categorie: 'Matière Première',
+                quantite: 120,
+                unite: 'm²',
+                typeUnite: 'surface',
+                prixUnitaire: 45,
+                valeur: 5400,
+                seuilMin: 20,
+                fournisseurPrincipal: 'Bois du Québec Inc.',
+                fournisseurs: [
+                    { nom: 'Bois du Québec Inc.', prix: 45, delai: '5-7 jours' },
+                    { nom: 'Foresterie Premium', prix: 48, delai: '3-5 jours' }
+                ],
+                recette: [],
+                description: 'Bois de chêne premium pour meubles haut de gamme'
+            },
+            {
+                id: 2,
+                nom: 'Quincaillerie Haut Gamme',
+                categorie: 'Composants',
+                quantite: 500,
+                unite: 'pcs',
+                typeUnite: 'unité',
+                prixUnitaire: 8.5,
+                valeur: 4250,
+                seuilMin: 100,
+                fournisseurPrincipal: 'Métaux Spécialisés',
+                fournisseurs: [
+                    { nom: 'Métaux Spécialisés', prix: 8.5, delai: '2-3 jours' },
+                    { nom: 'Quincaillerie Pro', prix: 9.0, delai: '1-2 jours' }
+                ],
+                recette: [],
+                description: 'Visserie et quincaillerie de qualité professionnelle'
+            },
+            {
+                id: 3,
+                nom: 'Vernis Protection',
+                categorie: 'Finition',
+                quantite: 15,
+                unite: 'L',
+                typeUnite: 'volume',
+                prixUnitaire: 35,
+                valeur: 525,
+                seuilMin: 5,
+                fournisseurPrincipal: 'Chimie Pro',
+                fournisseurs: [
+                    { nom: 'Chimie Pro', prix: 35, delai: '1-2 jours' },
+                    { nom: 'Finitions Expert', prix: 33, delai: '3-4 jours' }
+                ],
+                recette: [],
+                description: 'Vernis de protection haute qualité pour finitions durables'
+            },
+            {
+                id: 4,
+                nom: 'Chaise Bureau Premium',
+                categorie: 'Produit Fini',
+                quantite: 75,
+                unite: 'pcs',
+                typeUnite: 'unité',
+                prixUnitaire: 250,
+                valeur: 18750,
+                seuilMin: 10,
+                fournisseurPrincipal: 'Production Interne',
+                fournisseurs: [
+                    { nom: 'Production Interne', prix: 250, delai: 'immédiat' }
+                ],
+                recette: [
+                    { composant: 'Bois Chêne Premium', quantite: 2.5, unite: 'm²' },
+                    { composant: 'Quincaillerie Haut Gamme', quantite: 15, unite: 'pcs' },
+                    { composant: 'Vernis Protection', quantite: 0.5, unite: 'L' }
+                ],
+                description: 'Chaise de bureau ergonomique en chêne premium'
+            }
+        ];
 
-            // Fonctions pour gérer l'inventaire
-            const ajouterArticle = (nouvelArticle) => {
-                const nouvelId = Math.max(...inventaire.map(i => i.id), 0) + 1;
-                const article = {
-                    ...nouvelArticle,
-                    id: nouvelId,
-                    valeur: nouvelArticle.quantite * nouvelArticle.prixUnitaire,
-                    fournisseurPrincipal: nouvelArticle.fournisseurs?.[0]?.nom || '',
-                    fournisseurs: nouvelArticle.fournisseurs || [{ nom: nouvelArticle.fournisseurPrincipal, prix: nouvelArticle.prixUnitaire, delai: '1-2 jours' }],
-                    recette: nouvelArticle.recette || []
-                };
+        let mainOeuvre = [
+            {
+                id: 1,
+                employe: 'Jean Tremblay',
+                poste: 'Ébéniste Senior',
+                tauxHoraire: 35,
+                heuresTravaillees: 160,
+                coutTotal: 5600,
+                mois: 'Août 2025'
+            },
+            {
+                id: 2,
+                employe: 'Marie Dubois',
+                poste: 'Finition Spécialiste',
+                tauxHoraire: 30,
+                heuresTravaillees: 155,
+                coutTotal: 4650,
+                mois: 'Août 2025'
+            },
+            {
+                id: 3,
+                employe: 'Pierre Lavoie',
+                poste: 'Assembleur',
+                tauxHoraire: 25,
+                heuresTravaillees: 165,
+                coutTotal: 4125,
+                mois: 'Août 2025'
+            }
+        ];
 
-            const ItemDetailModal = () => {
-                if (!showItemDetail || !selectedItem) return null;
+        // Fonctions utilitaires
+        function calculateKPIs() {
+            const totalProductions = productions.length;
+            const productionsEnCours = productions.filter(p => p.statut === 'En cours').length;
+            const valeurInventaireTotal = inventaire.reduce((sum, item) => sum + item.valeur, 0);
+            const coutMainOeuvreTotal = mainOeuvre.reduce((sum, mo) => sum + mo.coutTotal, 0);
+            const coutMatiereTotal = productions.reduce((sum, p) => sum + p.coutMatiere, 0);
+            const alertesStock = inventaire.filter(item => item.quantite <= item.seuilMin).length;
 
-                const [editMode, setEditMode] = useState(false);
-                const [editData, setEditData] = useState(selectedItem);
+            return {
+                totalProductions,
+                productionsEnCours,
+                valeurInventaireTotal,
+                coutMainOeuvreTotal,
+                coutMatiereTotal,
+                alertesStock
+            };
+        }
 
-                const handleSave = () => {
-                    modifierArticle(editData);
-                    setEditMode(false);
-                };
-
-                const ajouterFournisseur = () => {
-                    setEditData(prev => ({
-                        ...prev,
-                        fournisseurs: [...prev.fournisseurs, { nom: '', prix: 0, delai: '' }]
-                    }));
-                };
-
-                const supprimerFournisseur = (index) => {
-                    setEditData(prev => ({
-                        ...prev,
-                        fournisseurs: prev.fournisseurs.filter((_, i) => i !== index)
-                    }));
-                };
-
-                const modifierFournisseur = (index, field, value) => {
-                    setEditData(prev => ({
-                        ...prev,
-                        fournisseurs: prev.fournisseurs.map((fournisseur, i) => 
-                            i === index ? { ...fournisseur, [field]: value } : fournisseur
-                        )
-                    }));
-                };
-
-                const ajouterComposantRecette = () => {
-                    setEditData(prev => ({
-                        ...prev,
-                        recette: [...prev.recette, { composant: '', quantite: 0, unite: '' }]
-                    }));
-                };
-
-                const supprimerComposantRecette = (index) => {
-                    setEditData(prev => ({
-                        ...prev,
-                        recette: prev.recette.filter((_, i) => i !== index)
-                    }));
-                };
-
-                const modifierComposantRecette = (index, field, value) => {
-                    setEditData(prev => ({
-                        ...prev,
-                        recette: prev.recette.map((composant, i) => 
-                            i === index ? { ...composant, [field]: value } : composant
-                        )
-                    }));
-                };
-
-                return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="p-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-2xl font-semibold text-gray-800">
-                                        {editMode ? 'Modifier' : 'Détails'} - {editData.nom}
-                                    </h3>
-                                    <div className="flex space-x-2">
-                                        {!editMode && (
-                                            <button 
-                                                onClick={() => setEditMode(true)}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-                                            >
-                                                <Icons.Edit />
-                                                <span>Modifier</span>
-                                            </button>
-                                        )}
-                                        <button 
-                                            onClick={() => setShowItemDetail(false)}
-                                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                        >
-                                            Fermer
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {/* Informations générales */}
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h4 className="text-lg font-semibold text-gray-800 mb-4">Informations Générales</h4>
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-                                                    {editMode ? (
-                                                        <input 
-                                                            type="text" 
-                                                            value={editData.nom} 
-                                                            onChange={(e) => setEditData(prev => ({...prev, nom: e.target.value}))}
-                                                            className="w-full p-3 border border-gray-300 rounded-lg"
-                                                        />
-                                                    ) : (
-                                                        <p className="text-gray-900">{editData.nom}</p>
-                                                    )}
-                                                </div>
-                                                
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                                                    {editMode ? (
-                                                        <select 
-                                                            value={editData.categorie} 
-                                                            onChange={(e) => setEditData(prev => ({...prev, categorie: e.target.value}))}
-                                                            className="w-full p-3 border border-gray-300 rounded-lg"
-                                                        >
-                                                            <option value="Matière Première">Matière Première</option>
-                                                            <option value="Composants">Composants</option>
-                                                            <option value="Finition">Finition</option>
-                                                            <option value="Produit Fini">Produit Fini</option>
-                                                        </select>
-                                                    ) : (
-                                                        <p className="text-gray-900">{editData.categorie}</p>
-                                                    )}
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
-                                                        {editMode ? (
-                                                            <input 
-                                                                type="number" 
-                                                                value={editData.quantite} 
-                                                                onChange={(e) => setEditData(prev => ({...prev, quantite: parseFloat(e.target.value) || 0}))}
-                                                                className="w-full p-3 border border-gray-300 rounded-lg"
-                                                            />
-                                                        ) : (
-                                                            <p className="text-gray-900">{editData.quantite} {editData.unite}</p>
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Prix unitaire</label>
-                                                        {editMode ? (
-                                                            <input 
-                                                                type="number" 
-                                                                step="0.01"
-                                                                value={editData.prixUnitaire} 
-                                                                onChange={(e) => setEditData(prev => ({...prev, prixUnitaire: parseFloat(e.target.value) || 0}))}
-                                                                className="w-full p-3 border border-gray-300 rounded-lg"
-                                                            />
-                                                        ) : (
-                                                            <p className="text-gray-900">{editData.prixUnitaire}$</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                                    {editMode ? (
-                                                        <textarea 
-                                                            value={editData.description || ''} 
-                                                            onChange={(e) => setEditData(prev => ({...prev, description: e.target.value}))}
-                                                            className="w-full p-3 border border-gray-300 rounded-lg h-20"
-                                                        />
-                                                    ) : (
-                                                        <p className="text-gray-900">{editData.description || 'Aucune description'}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Fournisseurs */}
-                                        <div>
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h4 className="text-lg font-semibold text-gray-800">Fournisseurs</h4>
-                                                {editMode && (
-                                                    <button 
-                                                        onClick={ajouterFournisseur}
-                                                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center space-x-1"
-                                                    >
-                                                        <Icons.Plus />
-                                                        <span>Ajouter</span>
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="space-y-3">
-                                                {editData.fournisseurs?.map((fournisseur, index) => (
-                                                    <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                                                        {editMode ? (
-                                                            <div className="space-y-2">
-                                                                <div className="flex justify-between items-start">
-                                                                    <div className="flex-1 grid grid-cols-1 gap-2">
-                                                                        <input 
-                                                                            type="text" 
-                                                                            placeholder="Nom du fournisseur"
-                                                                            value={fournisseur.nom} 
-                                                                            onChange={(e) => modifierFournisseur(index, 'nom', e.target.value)}
-                                                                            className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                        />
-                                                                        <div className="grid grid-cols-2 gap-2">
-                                                                            <input 
-                                                                                type="number" 
-                                                                                step="0.01"
-                                                                                placeholder="Prix"
-                                                                                value={fournisseur.prix} 
-                                                                                onChange={(e) => modifierFournisseur(index, 'prix', parseFloat(e.target.value) || 0)}
-                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                            />
-                                                                            <input 
-                                                                                type="text" 
-                                                                                placeholder="Délai"
-                                                                                value={fournisseur.delai} 
-                                                                                onChange={(e) => modifierFournisseur(index, 'delai', e.target.value)}
-                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                    {editData.fournisseurs.length > 1 && (
-                                                                        <button 
-                                                                            onClick={() => supprimerFournisseur(index)}
-                                                                            className="ml-2 text-red-600 hover:text-red-800"
-                                                                        >
-                                                                            <Icons.Trash2 />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div>
-                                                                <p className="font-medium text-gray-800">{fournisseur.nom}</p>
-                                                                <p className="text-sm text-gray-600">{fournisseur.prix}$ - Délai: {fournisseur.delai}</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Recette/Nomenclature */}
-                                    <div>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="text-lg font-semibold text-gray-800">Recette/Nomenclature</h4>
-                                            {editMode && (
-                                                <button 
-                                                    onClick={ajouterComposantRecette}
-                                                    className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 flex items-center space-x-1"
-                                                >
-                                                    <Icons.Plus />
-                                                    <span>Ajouter Composant</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                        
-                                        {editData.recette?.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {editData.recette.map((composant, index) => (
-                                                    <div key={index} className="border rounded-lg p-4 bg-blue-50">
-                                                        {editMode ? (
-                                                            <div className="space-y-2">
-                                                                <div className="flex justify-between items-start">
-                                                                    <div className="flex-1 grid grid-cols-1 gap-2">
-                                                                        <input 
-                                                                            type="text" 
-                                                                            placeholder="Nom du composant"
-                                                                            value={composant.composant} 
-                                                                            onChange={(e) => modifierComposantRecette(index, 'composant', e.target.value)}
-                                                                            className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                        />
-                                                                        <div className="grid grid-cols-2 gap-2">
-                                                                            <input 
-                                                                                type="number" 
-                                                                                step="0.01"
-                                                                                placeholder="Quantité"
-                                                                                value={composant.quantite} 
-                                                                                onChange={(e) => modifierComposantRecette(index, 'quantite', parseFloat(e.target.value) || 0)}
-                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                            />
-                                                                            <input 
-                                                                                type="text" 
-                                                                                placeholder="Unité"
-                                                                                value={composant.unite} 
-                                                                                onChange={(e) => modifierComposantRecette(index, 'unite', e.target.value)}
-                                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                    <button 
-                                                                        onClick={() => supprimerComposantRecette(index)}
-                                                                        className="ml-2 text-red-600 hover:text-red-800"
-                                                                    >
-                                                                        <Icons.Trash2 />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div>
-                                                                <p className="font-medium text-gray-800">{composant.composant}</p>
-                                                                <p className="text-sm text-gray-600">{composant.quantite} {composant.unite}</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-gray-500 italic">Aucun composant défini</p>
-                                        )}
-
-                                        {/* Statistiques */}
-                                        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-                                            <h5 className="font-semibold text-gray-800 mb-3">Statistiques</h5>
-                                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div>
-                                                    <p className="text-gray-600">Valeur totale</p>
-                                                    <p className="font-semibold text-lg text-green-600">
-                                                        {(editData.quantite * editData.prixUnitaire).toLocaleString()}$
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-gray-600">Statut stock</p>
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                        editData.quantite <= editData.seuilMin ? 
-                                                        'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                                    }`}>
-                                                        {editData.quantite <= editData.seuilMin ? 'Stock Bas' : 'Stock OK'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {editMode && (
-                                    <div className="flex space-x-3 mt-8 pt-6 border-t">
-                                        <button 
-                                            onClick={() => {setEditMode(false); setEditData(selectedItem);}}
-                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                        >
-                                            Annuler
-                                        </button>
-                                        <button 
-                                            onClick={handleSave}
-                                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                        >
-                                            Sauvegarder
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+        function renderApp() {
+            const kpis = calculateKPIs();
+            
+            const app = `
+                <div class="flex min-h-screen bg-gray-100">
+                    <!-- Navigation -->
+                    <div class="bg-blue-900 text-white w-64 min-h-screen p-4">
+                        <h1 class="text-2xl font-bold mb-8 text-center">ERP Production</h1>
+                        <nav class="space-y-2">
+                            <button onclick="setActiveModule('dashboard')" class="w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeModule === 'dashboard' ? 'bg-blue-700' : 'hover:bg-blue-800'}">
+                                <span>📊</span><span>Tableau de Bord</span>
+                            </button>
+                            <button onclick="setActiveModule('production')" class="w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeModule === 'production' ? 'bg-blue-700' : 'hover:bg-blue-800'}">
+                                <span>🔧</span><span>Production</span>
+                            </button>
+                            <button onclick="setActiveModule('inventaire')" class="w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeModule === 'inventaire' ? 'bg-blue-700' : 'hover:bg-blue-800'}">
+                                <span>📦</span><span>Inventaire</span>
+                            </button>
+                            <button onclick="setActiveModule('couts')" class="w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeModule === 'couts' ? 'bg-blue-700' : 'hover:bg-blue-800'}">
+                                <span>💰</span><span>Coûts</span>
+                            </button>
+                            <button onclick="setActiveModule('rapports')" class="w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${activeModule === 'rapports' ? 'bg-blue-700' : 'hover:bg-blue-800'}">
+                                <span>📋</span><span>Rapports</span>
+                            </button>
+                        </nav>
                     </div>
-                );
-            };
-                setInventaire([...inventaire, article]);
-                setShowModal(false);
-                setFormData({});
-            };
 
-            const modifierArticle = (articleModifie) => {
-                const updatedInventaire = inventaire.map(item => 
-                    item.id === articleModifie.id 
-                        ? { ...articleModifie, valeur: articleModifie.quantite * articleModifie.prixUnitaire }
-                        : item
-                );
-                setInventaire(updatedInventaire);
-                setShowItemDetail(false);
-                setSelectedItem(null);
-            };
-
-            const supprimerArticle = (id) => {
-                if (confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
-                    setInventaire(inventaire.filter(item => item.id !== id));
-                }
-            };
-
-            const ouvrirDetailItem = (item) => {
-                setSelectedItem(item);
-                setShowItemDetail(true);
-            };
-
-            const [inventaire, setInventaire] = useState([
-                {
-                    id: 1,
-                    nom: 'Bois Chêne Premium',
-                    categorie: 'Matière Première',
-                    quantite: 120,
-                    unite: 'm²',
-                    typeUnite: 'surface',
-                    prixUnitaire: 45,
-                    valeur: 5400,
-                    seuilMin: 20,
-                    fournisseurPrincipal: 'Bois du Québec Inc.',
-                    fournisseurs: [
-                        { nom: 'Bois du Québec Inc.', prix: 45, delai: '5-7 jours' },
-                        { nom: 'Foresterie Premium', prix: 48, delai: '3-5 jours' }
-                    ],
-                    recette: [],
-                    description: 'Bois de chêne premium pour meubles haut de gamme'
-                },
-                {
-                    id: 2,
-                    nom: 'Quincaillerie Haut Gamme',
-                    categorie: 'Composants',
-                    quantite: 500,
-                    unite: 'pcs',
-                    typeUnite: 'unité',
-                    prixUnitaire: 8.5,
-                    valeur: 4250,
-                    seuilMin: 100,
-                    fournisseurPrincipal: 'Métaux Spécialisés',
-                    fournisseurs: [
-                        { nom: 'Métaux Spécialisés', prix: 8.5, delai: '2-3 jours' },
-                        { nom: 'Quincaillerie Pro', prix: 9.0, delai: '1-2 jours' }
-                    ],
-                    recette: [],
-                    description: 'Visserie et quincaillerie de qualité professionnelle'
-                },
-                {
-                    id: 3,
-                    nom: 'Vernis Protection',
-                    categorie: 'Finition',
-                    quantite: 15,
-                    unite: 'L',
-                    typeUnite: 'volume',
-                    prixUnitaire: 35,
-                    valeur: 525,
-                    seuilMin: 5,
-                    fournisseurPrincipal: 'Chimie Pro',
-                    fournisseurs: [
-                        { nom: 'Chimie Pro', prix: 35, delai: '1-2 jours' },
-                        { nom: 'Finitions Expert', prix: 33, delai: '3-4 jours' }
-                    ],
-                    recette: [],
-                    description: 'Vernis de protection haute qualité pour finitions durables'
-                },
-                {
-                    id: 4,
-                    nom: 'Chaise Bureau Premium',
-                    categorie: 'Produit Fini',
-                    quantite: 75,
-                    unite: 'pcs',
-                    typeUnite: 'unité',
-                    prixUnitaire: 250,
-                    valeur: 18750,
-                    seuilMin: 10,
-                    fournisseurPrincipal: 'Production Interne',
-                    fournisseurs: [
-                        { nom: 'Production Interne', prix: 250, delai: 'immédiat' }
-                    ],
-                    recette: [
-                        { composant: 'Bois Chêne Premium', quantite: 2.5, unite: 'm²' },
-                        { composant: 'Quincaillerie Haut Gamme', quantite: 15, unite: 'pcs' },
-                        { composant: 'Vernis Protection', quantite: 0.5, unite: 'L' }
-                    ],
-                    description: 'Chaise de bureau ergonomique en chêne premium'
-                }
-            ]);
-
-            const [mainOeuvre] = useState([
-                {
-                    id: 1,
-                    employe: 'Jean Tremblay',
-                    poste: 'Ébéniste Senior',
-                    tauxHoraire: 35,
-                    heuresTravaillees: 160,
-                    coutTotal: 5600,
-                    mois: 'Août 2025'
-                },
-                {
-                    id: 2,
-                    employe: 'Marie Dubois',
-                    poste: 'Finition Spécialiste',
-                    tauxHoraire: 30,
-                    heuresTravaillees: 155,
-                    coutTotal: 4650,
-                    mois: 'Août 2025'
-                },
-                {
-                    id: 3,
-                    employe: 'Pierre Lavoie',
-                    poste: 'Assembleur',
-                    tauxHoraire: 25,
-                    heuresTravaillees: 165,
-                    coutTotal: 4125,
-                    mois: 'Août 2025'
-                }
-            ]);
-
-            // Calculs des KPIs
-            const kpis = useMemo(() => {
-                const totalProductions = productions.length;
-                const productionsEnCours = productions.filter(p => p.statut === 'En cours').length;
-                const valeurInventaireTotal = inventaire.reduce((sum, item) => sum + item.valeur, 0);
-                const coutMainOeuvreTotal = mainOeuvre.reduce((sum, mo) => sum + mo.coutTotal, 0);
-                const coutMatiereTotal = productions.reduce((sum, p) => sum + p.coutMatiere, 0);
-                const alertesStock = inventaire.filter(item => item.quantite <= item.seuilMin).length;
-
-                return {
-                    totalProductions,
-                    productionsEnCours,
-                    valeurInventaireTotal,
-                    coutMainOeuvreTotal,
-                    coutMatiereTotal,
-                    alertesStock
-                };
-            }, [productions, inventaire, mainOeuvre]);
-
-            const Navigation = () => (
-                <div className="bg-blue-900 text-white w-64 min-h-screen p-4">
-                    <h1 className="text-2xl font-bold mb-8 text-center">ERP Production</h1>
-                    <nav className="space-y-2">
-                        {[
-                            { id: 'dashboard', label: 'Tableau de Bord', icon: 'BarChart3' },
-                            { id: 'production', label: 'Production', icon: 'Wrench' },
-                            { id: 'inventaire', label: 'Inventaire', icon: 'Package' },
-                            { id: 'couts', label: 'Coûts', icon: 'DollarSign' },
-                            { id: 'rapports', label: 'Rapports', icon: 'ClipboardList' }
-                        ].map(item => {
-                            const IconComponent = Icons[item.icon];
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => setActiveModule(item.id)}
-                                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                                        activeModule === item.id 
-                                            ? 'bg-blue-700 text-white' 
-                                            : 'hover:bg-blue-800 text-blue-100'
-                                    }`}
-                                >
-                                    <IconComponent />
-                                    <span>{item.label}</span>
-                                </button>
-                            );
-                        })}
-                    </nav>
+                    <!-- Contenu principal -->
+                    <div class="flex-1 p-6">
+                        ${renderActiveModule(kpis)}
+                    </div>
                 </div>
-            );
 
-            const Dashboard = () => (
-                <div className="space-y-6">
-                    <h2 className="text-3xl font-bold text-gray-800">Tableau de Bord</h2>
+                ${showModal ? renderModal() : ''}
+                ${showItemDetail ? renderItemDetail() : ''}
+            `;
+
+            document.getElementById('root').innerHTML = app;
+        }
+
+        function renderActiveModule(kpis) {
+            switch(activeModule) {
+                case 'dashboard': return renderDashboard(kpis);
+                case 'production': return renderProduction();
+                case 'inventaire': return renderInventaire(kpis);
+                case 'couts': return renderCouts(kpis);
+                case 'rapports': return renderRapports();
+                default: return renderDashboard(kpis);
+            }
+        }
+
+        function renderDashboard(kpis) {
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Tableau de Bord</h2>
                     
-                    {/* KPIs */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-                            <div className="flex items-center justify-between">
+                    <!-- KPIs -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <p className="text-gray-600 text-sm">Productions Totales</p>
-                                    <p className="text-2xl font-bold text-gray-800">{kpis.totalProductions}</p>
+                                    <p class="text-gray-600 text-sm">Productions Totales</p>
+                                    <p class="text-2xl font-bold text-gray-800">${kpis.totalProductions}</p>
                                 </div>
-                                <div className="text-blue-500">
-                                    <Icons.Wrench />
-                                </div>
+                                <span class="text-blue-500 text-2xl">🔧</span>
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
-                            <div className="flex items-center justify-between">
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <p className="text-gray-600 text-sm">En Cours</p>
-                                    <p className="text-2xl font-bold text-gray-800">{kpis.productionsEnCours}</p>
+                                    <p class="text-gray-600 text-sm">En Cours</p>
+                                    <p class="text-2xl font-bold text-gray-800">${kpis.productionsEnCours}</p>
                                 </div>
-                                <div className="text-green-500">
-                                    <Icons.Clock />
-                                </div>
+                                <span class="text-green-500 text-2xl">⏰</span>
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
-                            <div className="flex items-center justify-between">
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <p className="text-gray-600 text-sm">Valeur Inventaire</p>
-                                    <p className="text-2xl font-bold text-gray-800">{kpis.valeurInventaireTotal.toLocaleString()}$</p>
+                                    <p class="text-gray-600 text-sm">Valeur Inventaire</p>
+                                    <p class="text-2xl font-bold text-gray-800">${kpis.valeurInventaireTotal.toLocaleString()}$</p>
                                 </div>
-                                <div className="text-purple-500">
-                                    <Icons.Package />
-                                </div>
+                                <span class="text-purple-500 text-2xl">📦</span>
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
-                            <div className="flex items-center justify-between">
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-red-500">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <p className="text-gray-600 text-sm">Alertes Stock</p>
-                                    <p className="text-2xl font-bold text-gray-800">{kpis.alertesStock}</p>
+                                    <p class="text-gray-600 text-sm">Alertes Stock</p>
+                                    <p class="text-2xl font-bold text-gray-800">${kpis.alertesStock}</p>
                                 </div>
-                                <div className="text-red-500">
-                                    <Icons.AlertTriangle />
-                                </div>
+                                <span class="text-red-500 text-2xl">⚠️</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Graphiques et tableaux récents */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Productions Récentes</h3>
-                            <div className="space-y-3">
-                                {productions.slice(0, 3).map(prod => (
-                                    <div key={prod.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <!-- Productions récentes -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-800">Productions Récentes</h3>
+                            <div class="space-y-3">
+                                ${productions.slice(0, 3).map(prod => `
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                         <div>
-                                            <p className="font-medium text-gray-800">{prod.produit}</p>
-                                            <p className="text-sm text-gray-600">Quantité: {prod.quantite}</p>
+                                            <p class="font-medium text-gray-800">${prod.produit}</p>
+                                            <p class="text-sm text-gray-600">Quantité: ${prod.quantite}</p>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                            prod.statut === 'Terminé' ? 'bg-green-100 text-green-800' :
-                                            prod.statut === 'En cours' ? 'bg-blue-100 text-blue-800' :
-                                            'bg-yellow-100 text-yellow-800'
-                                        }`}>
-                                            {prod.statut}
+                                        <span class="px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(prod.statut)}">
+                                            ${prod.statut}
                                         </span>
                                     </div>
-                                ))}
+                                `).join('')}
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Coûts du Mois</h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Matières Premières</span>
-                                    <span className="font-semibold text-gray-800">{kpis.coutMatiereTotal.toLocaleString()}$</span>
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-800">Coûts du Mois</h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Matières Premières</span>
+                                    <span class="font-semibold text-gray-800">${kpis.coutMatiereTotal.toLocaleString()}$</span>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Main d'Œuvre</span>
-                                    <span className="font-semibold text-gray-800">{kpis.coutMainOeuvreTotal.toLocaleString()}$</span>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Main d'Œuvre</span>
+                                    <span class="font-semibold text-gray-800">${kpis.coutMainOeuvreTotal.toLocaleString()}$</span>
                                 </div>
-                                <div className="border-t pt-2 flex justify-between items-center font-bold">
-                                    <span className="text-gray-800">Total</span>
-                                    <span className="text-gray-800">{(kpis.coutMatiereTotal + kpis.coutMainOeuvreTotal).toLocaleString()}$</span>
+                                <div class="border-t pt-2 flex justify-between items-center font-bold">
+                                    <span class="text-gray-800">Total</span>
+                                    <span class="text-gray-800">${(kpis.coutMatiereTotal + kpis.coutMainOeuvreTotal).toLocaleString()}$</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            );
+            `;
+        }
 
-            const ProductionModule = () => (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-3xl font-bold text-gray-800">Gestion de Production</h2>
-                        <button 
-                            onClick={() => {setModalType('production'); setShowModal(true);}}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                        >
-                            <Icons.Plus />
-                            <span>Nouvel Ordre</span>
+        function renderInventaire(kpis) {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-bold text-gray-800">Gestion d'Inventaire</h2>
+                        <button onclick="openModal('inventaire')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                            <span>➕</span><span>Ajouter Article</span>
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                    ${kpis.alertesStock > 0 ? `
+                        <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                            <div class="flex">
+                                <span class="text-red-400 mr-3">⚠️</span>
+                                <p class="text-sm text-red-700">
+                                    <strong>Alerte Stock:</strong> ${kpis.alertesStock} article(s) sous le seuil minimum
+                                </p>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produit</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progression</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coût Total</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unit.</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {productions.map((prod) => (
-                                        <tr key={prod.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{prod.produit}</div>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${inventaire.map(item => `
+                                        <tr class="hover:bg-gray-50 cursor-pointer" onclick="openItemDetail(${item.id})">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">${item.nom}</div>
+                                                <div class="text-sm text-gray-500">${item.fournisseurPrincipal}</div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{prod.quantite}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                    prod.statut === 'Terminé' ? 'bg-green-100 text-green-800' :
-                                                    prod.statut === 'En cours' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                    {prod.statut}
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.categorie}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.quantite} ${item.unite}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.prixUnitaire}$</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.valeur.toLocaleString()}$</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.quantite <= item.seuilMin ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                                                    ${item.quantite <= item.seuilMin ? 'Stock Bas' : 'OK'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div 
-                                                        className="bg-blue-600 h-2 rounded-full" 
-                                                        style={{width: `${prod.progression}%`}}
-                                                    ></div>
-                                                </div>
-                                                <span className="text-xs text-gray-500">{prod.progression}%</span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <div>{prod.dateDebut}</div>
-                                                <div className="text-gray-500">→ {prod.dateFin}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {(prod.coutMatiere + prod.coutMainOeuvre).toLocaleString()}$
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                                <button className="text-blue-600 hover:text-blue-900 inline-flex"><Icons.Eye /></button>
-                                                <button className="text-green-600 hover:text-green-900 inline-flex"><Icons.Edit /></button>
-                                                <button className="text-red-600 hover:text-red-900 inline-flex"><Icons.Trash2 /></button>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2" onclick="event.stopPropagation()">
+                                                <button onclick="openItemDetail(${item.id})" class="text-blue-600 hover:text-blue-900" title="Voir détails">👁️</button>
+                                                <button onclick="editItem(${item.id})" class="text-green-600 hover:text-green-900" title="Modifier">✏️</button>
+                                                <button onclick="deleteItem(${item.id})" class="text-red-600 hover:text-red-900" title="Supprimer">🗑️</button>
                                             </td>
                                         </tr>
-                                    ))}
+                                    `).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            );
+            `;
+        }
 
-            const InventaireModule = () => (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-3xl font-bold text-gray-800">Gestion d'Inventaire</h2>
-                        <button 
-                            onClick={() => {setModalType('inventaire'); setShowModal(true);}}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
-                        >
-                            <Icons.Plus />
-                            <span>Ajouter Article</span>
+        function renderProduction() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-bold text-gray-800">Gestion de Production</h2>
+                        <button onclick="openModal('production')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                            <span>➕</span><span>Nouvel Ordre</span>
                         </button>
                     </div>
 
-                    {/* Alertes stock */}
-                    {kpis.alertesStock > 0 && (
-                        <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                            <div className="flex">
-                                <div className="text-red-400 mr-3">
-                                    <Icons.AlertTriangle />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-red-700">
-                                        <strong>Alerte Stock:</strong> {kpis.alertesStock} article(s) sous le seuil minimum
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unit.</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produit</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progression</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coût Total</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {inventaire.map((item) => (
-                                        <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => ouvrirDetailItem(item)}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{item.nom}</div>
-                                                <div className="text-sm text-gray-500">{item.fournisseurPrincipal}</div>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${productions.map(prod => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">${prod.produit}</div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.categorie}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {item.quantite} {item.unite}
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${prod.quantite}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(prod.statut)}">
+                                                    ${prod.statut}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {item.prixUnitaire}$
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${prod.progression}%"></div>
+                                                </div>
+                                                <span class="text-xs text-gray-500">${prod.progression}%</span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {item.valeur.toLocaleString()}$
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {item.quantite <= item.seuilMin ? (
-                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                        Stock Bas
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                        OK
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2" onClick={(e) => e.stopPropagation()}>
-                                                <button 
-                                                    className="text-blue-600 hover:text-blue-900 inline-flex" 
-                                                    onClick={(e) => {e.stopPropagation(); ouvrirDetailItem(item);}}
-                                                    title="Voir détails"
-                                                >
-                                                    <Icons.Eye />
-                                                </button>
-                                                <button 
-                                                    className="text-green-600 hover:text-green-900 inline-flex"
-                                                    onClick={(e) => {e.stopPropagation(); ouvrirDetailItem(item);}}
-                                                    title="Modifier"
-                                                >
-                                                    <Icons.Edit />
-                                                </button>
-                                                <button 
-                                                    className="text-red-600 hover:text-red-900 inline-flex"
-                                                    onClick={(e) => {e.stopPropagation(); supprimerArticle(item.id);}}
-                                                    title="Supprimer"
-                                                >
-                                                    <Icons.Trash2 />
-                                                </button>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                ${(prod.coutMatiere + prod.coutMainOeuvre).toLocaleString()}$
                                             </td>
                                         </tr>
-                                    ))}
+                                    `).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            );
+            `;
+        }
 
-            const CoutsModule = () => (
-                <div className="space-y-6">
-                    <h2 className="text-3xl font-bold text-gray-800">Gestion des Coûts</h2>
+        function renderCouts(kpis) {
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Gestion des Coûts</h2>
 
-                    {/* Résumé des coûts */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Matières Premières</h3>
-                            <p className="text-2xl font-bold text-blue-600">{kpis.coutMatiereTotal.toLocaleString()}$</p>
-                            <p className="text-sm text-gray-500">Ce mois</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-500">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Matières Premières</h3>
+                            <p class="text-2xl font-bold text-blue-600">${kpis.coutMatiereTotal.toLocaleString()}$</p>
+                            <p class="text-sm text-gray-500">Ce mois</p>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Main d'Œuvre</h3>
-                            <p className="text-2xl font-bold text-green-600">{kpis.coutMainOeuvreTotal.toLocaleString()}$</p>
-                            <p className="text-sm text-gray-500">Ce mois</p>
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Main d'Œuvre</h3>
+                            <p class="text-2xl font-bold text-green-600">${kpis.coutMainOeuvreTotal.toLocaleString()}$</p>
+                            <p class="text-sm text-gray-500">Ce mois</p>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Total</h3>
-                            <p className="text-2xl font-bold text-purple-600">
-                                {(kpis.coutMatiereTotal + kpis.coutMainOeuvreTotal).toLocaleString()}$
-                            </p>
-                            <p className="text-sm text-gray-500">Ce mois</p>
+                        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-purple-500">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Total</h3>
+                            <p class="text-2xl font-bold text-purple-600">${(kpis.coutMatiereTotal + kpis.coutMainOeuvreTotal).toLocaleString()}$</p>
+                            <p class="text-sm text-gray-500">Ce mois</p>
                         </div>
                     </div>
 
-                    {/* Détail main d'œuvre */}
-                    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-800">Détail Main d'Œuvre</h3>
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800">Détail Main d'Œuvre</h3>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employé</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Poste</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taux/h</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heures</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coût Total</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Période</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employé</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Poste</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taux/h</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heures</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coût Total</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {mainOeuvre.map((mo) => (
-                                        <tr key={mo.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{mo.employe}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{mo.poste}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{mo.tauxHoraire}$/h</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{mo.heuresTravaillees}h</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {mo.coutTotal.toLocaleString()}$
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{mo.mois}</td>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${mainOeuvre.map(mo => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${mo.employe}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${mo.poste}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${mo.tauxHoraire}$/h</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${mo.heuresTravaillees}h</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${mo.coutTotal.toLocaleString()}$</td>
                                         </tr>
-                                    ))}
+                                    `).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            );
+            `;
+        }
 
-            const RapportsModule = () => (
-                <div className="space-y-6">
-                    <h2 className="text-3xl font-bold text-gray-800">Rapports & Analyses</h2>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Rentabilité par produit */}
-                        <div className="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Rentabilité par Produit</h3>
-                            <div className="space-y-4">
-                                {productions.map(prod => {
+        function renderRapports() {
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Rapports & Analyses</h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-800">Rentabilité par Produit</h3>
+                            <div class="space-y-4">
+                                ${productions.map(prod => {
                                     const coutTotal = prod.coutMatiere + prod.coutMainOeuvre;
                                     const coutUnitaire = coutTotal / prod.quantite;
                                     const prixVenteEstime = coutUnitaire * 1.5;
                                     const beneficeUnitaire = prixVenteEstime - coutUnitaire;
                                     
-                                    return (
-                                        <div key={prod.id} className="border rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-800">{prod.produit}</h4>
-                                            <div className="mt-2 space-y-1 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Coût unitaire:</span>
-                                                    <span>{Math.round(coutUnitaire)}$</span>
+                                    return `
+                                        <div class="border rounded-lg p-4">
+                                            <h4 class="font-medium text-gray-800">${prod.produit}</h4>
+                                            <div class="mt-2 space-y-1 text-sm">
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">Coût unitaire:</span>
+                                                    <span>${Math.round(coutUnitaire)}$</span>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Prix de vente estimé:</span>
-                                                    <span>{Math.round(prixVenteEstime)}$</span>
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">Prix de vente estimé:</span>
+                                                    <span>${Math.round(prixVenteEstime)}$</span>
                                                 </div>
-                                                <div className="flex justify-between font-medium">
-                                                    <span className="text-gray-800">Bénéfice unitaire:</span>
-                                                    <span className="text-green-600">+{Math.round(beneficeUnitaire)}$</span>
+                                                <div class="flex justify-between font-medium">
+                                                    <span class="text-gray-800">Bénéfice unitaire:</span>
+                                                    <span class="text-green-600">+${Math.round(beneficeUnitaire)}$</span>
                                                 </div>
                                             </div>
                                         </div>
-                                    );
-                                })}
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
 
-                        {/* Performance mensuelle */}
-                        <div className="bg-white p-6 rounded-xl shadow-lg">
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Performance Mensuelle</h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                    <span className="text-gray-700">Productions terminées</span>
-                                    <span className="font-bold text-blue-600">
-                                        {productions.filter(p => p.statut === 'Terminé').length}
-                                    </span>
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-800">Performance Mensuelle</h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                                    <span class="text-gray-700">Productions terminées</span>
+                                    <span class="font-bold text-blue-600">${productions.filter(p => p.statut === 'Terminé').length}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                                    <span className="text-gray-700">Valeur produite</span>
-                                    <span className="font-bold text-green-600">
-                                        {productions
+                                <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                                    <span class="text-gray-700">Valeur produite</span>
+                                    <span class="font-bold text-green-600">
+                                        ${productions
                                             .filter(p => p.statut === 'Terminé')
                                             .reduce((sum, p) => sum + (p.coutMatiere + p.coutMainOeuvre), 0)
                                             .toLocaleString()}$
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                                    <span className="text-gray-700">Efficacité moyenne</span>
-                                    <span className="font-bold text-purple-600">92%</span>
+                                <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                                    <span class="text-gray-700">Efficacité moyenne</span>
+                                    <span class="font-bold text-purple-600">92%</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tendances */}
-                    <div className="bg-white p-6 rounded-xl shadow-lg">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Tendances & Prévisions</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                                <div className="mx-auto mb-2 text-blue-600 flex justify-center">
-                                    <Icons.TrendingUp />
-                                </div>
-                                <h4 className="font-medium text-gray-800">Production</h4>
-                                <p className="text-sm text-gray-600">+15% ce mois</p>
-                            </div>
-                            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                                <div className="mx-auto mb-2 text-green-600 flex justify-center">
-                                    <Icons.DollarSign />
-                                </div>
-                                <h4 className="font-medium text-gray-800">Revenus</h4>
-                                <p className="text-sm text-gray-600">+8% ce mois</p>
-                            </div>
-                            <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-                                <div className="mx-auto mb-2 text-purple-600 flex justify-center">
-                                    <Icons.Users />
-                                </div>
-                                <h4 className="font-medium text-gray-800">Efficacité</h4>
-                                <p className="text-sm text-gray-600">+3% ce mois</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            );
+            `;
+        }
 
-            const Modal = () => {
-                if (!showModal) return null;
+        function renderModal() {
+            return `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <h3 class="text-xl font-semibold mb-6">
+                                ${modalType === 'production' ? 'Nouvel Ordre de Production' : 'Nouvel Article Inventaire'}
+                            </h3>
+                            
+                            <form id="modalForm" class="space-y-4">
+                                ${modalType === 'inventaire' ? `
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input name="nom" type="text" placeholder="Nom de l'article" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                        <select name="categorie" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                                            <option value="">Sélectionner catégorie</option>
+                                            <option value="Matière Première">Matière Première</option>
+                                            <option value="Composants">Composants</option>
+                                            <option value="Finition">Finition</option>
+                                            <option value="Produit Fini">Produit Fini</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <input name="quantite" type="number" placeholder="Quantité" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                        <input name="unite" type="text" placeholder="Unité (kg, pcs, L...)" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                        <input name="prixUnitaire" type="number" step="0.01" placeholder="Prix unitaire" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                    </div>
+                                    
+                                    <input name="fournisseurPrincipal" type="text" placeholder="Fournisseur principal" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                    <textarea name="description" placeholder="Description" class="w-full p-3 border border-gray-300 rounded-lg h-20"></textarea>
+                                ` : `
+                                    <input name="produit" type="text" placeholder="Nom du produit" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                    <input name="quantite" type="number" placeholder="Quantité" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                    <input name="dateDebut" type="date" class="w-full p-3 border border-gray-300 rounded-lg" required />
+                                    <input name="coutMatiere" type="number" placeholder="Coût matière" class="w-full p-3 border border-gray-300 rounded-lg" />
+                                `}
+                            </form>
+                            
+                            <div class="flex space-x-3 mt-6">
+                                <button onclick="closeModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    Annuler
+                                </button>
+                                <button onclick="submitForm()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                    Créer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-                const handleSubmit = (e) => {
-                    e.preventDefault();
-                    if (modalType === 'inventaire') {
-                        ajouterArticle(formData);
-                    }
-                };
+        function renderItemDetail() {
+            if (!selectedItem) return '';
+            
+            return `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-2xl font-semibold text-gray-800">Détails - ${selectedItem.nom}</h3>
+                                <button onclick="closeItemDetail()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                    Fermer
+                                </button>
+                            </div>
 
-                const handleInputChange = (field, value) => {
-                    setFormData(prev => ({ ...prev, [field]: value }));
-                };
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <!-- Informations générales -->
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Informations Générales</h4>
+                                        <div class="space-y-3">
+                                            <p><strong>Nom:</strong> ${selectedItem.nom}</p>
+                                            <p><strong>Catégorie:</strong> ${selectedItem.categorie}</p>
+                                            <p><strong>Stock:</strong> ${selectedItem.quantite} ${selectedItem.unite}</p>
+                                            <p><strong>Prix unitaire:</strong> ${selectedItem.prixUnitaire}$</p>
+                                            <p><strong>Valeur totale:</strong> ${selectedItem.valeur.toLocaleString()}$</p>
+                                            <p><strong>Description:</strong> ${selectedItem.description || 'Aucune description'}</p>
+                                        </div>
+                                    </div>
 
-                return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                            <div className="p-6">
-                                <h3 className="text-xl font-semibold mb-6">
-                                    {modalType === 'production' ? 'Nouvel Ordre de Production' : 'Nouvel Article Inventaire'}
-                                </h3>
-                                
-                                <form onSubmit={handleSubmit} className="space-y-4">
-                                    {modalType === 'inventaire' ? (
-                                        <>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Nom de l'article"
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.nom || ''}
-                                                    onChange={(e) => handleInputChange('nom', e.target.value)}
-                                                    required
-                                                />
-                                                <select 
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.categorie || ''}
-                                                    onChange={(e) => handleInputChange('categorie', e.target.value)}
-                                                    required
-                                                >
-                                                    <option value="">Sélectionner catégorie</option>
-                                                    <option value="Matière Première">Matière Première</option>
-                                                    <option value="Composants">Composants</option>
-                                                    <option value="Finition">Finition</option>
-                                                    <option value="Produit Fini">Produit Fini</option>
-                                                </select>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <input 
-                                                    type="number" 
-                                                    placeholder="Quantité"
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.quantite || ''}
-                                                    onChange={(e) => handleInputChange('quantite', parseFloat(e.target.value) || 0)}
-                                                    required
-                                                />
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Unité (kg, pcs, L...)"
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.unite || ''}
-                                                    onChange={(e) => handleInputChange('unite', e.target.value)}
-                                                    required
-                                                />
-                                                <select 
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.typeUnite || ''}
-                                                    onChange={(e) => handleInputChange('typeUnite', e.target.value)}
-                                                    required
-                                                >
-                                                    <option value="">Type d'unité</option>
-                                                    <option value="unité">À l'unité</option>
-                                                    <option value="poids">Au poids</option>
-                                                    <option value="volume">Au volume</option>
-                                                    <option value="surface">À la surface</option>
-                                                    <option value="longueur">À la longueur</option>
-                                                </select>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <input 
-                                                    type="number" 
-                                                    step="0.01"
-                                                    placeholder="Prix unitaire"
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.prixUnitaire || ''}
-                                                    onChange={(e) => handleInputChange('prixUnitaire', parseFloat(e.target.value) || 0)}
-                                                    required
-                                                />
-                                                <input 
-                                                    type="number"
-                                                    placeholder="Seuil minimum"
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.seuilMin || ''}
-                                                    onChange={(e) => handleInputChange('seuilMin', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </div>
-                                            
-                                            <textarea 
-                                                placeholder="Description"
-                                                className="w-full p-3 border border-gray-300 rounded-lg h-20"
-                                                value={formData.description || ''}
-                                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                            />
-                                            
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Fournisseur principal</label>
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Nom du fournisseur"
-                                                    className="w-full p-3 border border-gray-300 rounded-lg"
-                                                    value={formData.fournisseurPrincipal || ''}
-                                                    onChange={(e) => handleInputChange('fournisseurPrincipal', e.target.value)}
-                                                />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        // Production form (existing)
-                                        <>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Nom du produit"
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
-                                                required
-                                            />
-                                            <input 
-                                                type="number" 
-                                                placeholder="Quantité"
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
-                                                required
-                                            />
-                                            <input 
-                                                type="date" 
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
-                                                required
-                                            />
-                                            <input 
-                                                type="number" 
-                                                placeholder="Coût matière"
-                                                className="w-full p-3 border border-gray-300 rounded-lg"
-                                            />
-                                        </>
-                                    )}
-                                </form>
-                                
-                                <div className="flex space-x-3 mt-6">
-                                    <button 
-                                        onClick={() => {setShowModal(false); setFormData({});}}
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                        type="button"
-                                    >
-                                        Annuler
-                                    </button>
-                                    <button 
-                                        onClick={handleSubmit}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                    >
-                                        Créer
-                                    </button>
+                                    <!-- Fournisseurs -->
+                                    <div>
+                                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Fournisseurs</h4>
+                                        <div class="space-y-2">
+                                            ${selectedItem.fournisseurs?.map(f => `
+                                                <div class="border rounded-lg p-3 bg-gray-50">
+                                                    <p class="font-medium">${f.nom}</p>
+                                                    <p class="text-sm text-gray-600">${f.prix}$ - Délai: ${f.delai}</p>
+                                                </div>
+                                            `).join('') || '<p class="text-gray-500">Aucun fournisseur défini</p>'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recette -->
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Recette/Nomenclature</h4>
+                                    ${selectedItem.recette?.length > 0 ? `
+                                        <div class="space-y-2">
+                                            ${selectedItem.recette.map(c => `
+                                                <div class="border rounded-lg p-3 bg-blue-50">
+                                                    <p class="font-medium">${c.composant}</p>
+                                                    <p class="text-sm text-gray-600">${c.quantite} ${c.unite}</p>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : '<p class="text-gray-500">Aucun composant défini</p>'}
+                                    
+                                    <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                        <h5 class="font-semibold text-gray-800 mb-2">Statut</h5>
+                                        <span class="px-3 py-1 rounded-full text-sm font-medium ${selectedItem.quantite <= selectedItem.seuilMin ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                                            ${selectedItem.quantite <= selectedItem.seuilMin ? 'Stock Bas - Réapprovisionner' : 'Stock Suffisant'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                );
-            };
-
-            const renderActiveModule = () => {
-                switch(activeModule) {
-                    case 'dashboard': return <Dashboard />;
-                    case 'production': return <ProductionModule />;
-                    case 'inventaire': return <InventaireModule />;
-                    case 'couts': return <CoutsModule />;
-                    case 'rapports': return <RapportsModule />;
-                    default: return <Dashboard />;
-                }
-            };
-
-            return (
-                <div className="flex min-h-screen bg-gray-100">
-                    <Navigation />
-                    <div className="flex-1 p-6">
-                        {renderActiveModule()}
-                    </div>
-                    <Modal />
-                    <ItemDetailModal />
                 </div>
-            );
-        };
+            `;
+        }
 
-        // Fonction pour démarrer l'application une fois que React est chargé
-        const startApp = () => {
-            if (window.React && window.ReactDOM) {
-                ReactDOM.render(React.createElement(ERP_App), document.getElementById('root'));
-            } else {
-                setTimeout(startApp, 100);
+        // Fonctions d'événement
+        function setActiveModule(module) {
+            activeModule = module;
+            renderApp();
+        }
+
+        function openModal(type) {
+            modalType = type;
+            showModal = true;
+            renderApp();
+        }
+
+        function closeModal() {
+            showModal = false;
+            modalType = '';
+            renderApp();
+        }
+
+        function openItemDetail(id) {
+            selectedItem = inventaire.find(item => item.id === id);
+            showItemDetail = true;
+            renderApp();
+        }
+
+        function closeItemDetail() {
+            showItemDetail = false;
+            selectedItem = null;
+            renderApp();
+        }
+
+        function submitForm() {
+            const form = document.getElementById('modalForm');
+            const formData = new FormData(form);
+            
+            if (modalType === 'inventaire') {
+                const newId = Math.max(...inventaire.map(i => i.id), 0) + 1;
+                const quantite = parseFloat(formData.get('quantite')) || 0;
+                const prixUnitaire = parseFloat(formData.get('prixUnitaire')) || 0;
+                
+                const newItem = {
+                    id: newId,
+                    nom: formData.get('nom'),
+                    categorie: formData.get('categorie'),
+                    quantite: quantite,
+                    unite: formData.get('unite'),
+                    typeUnite: 'unité',
+                    prixUnitaire: prixUnitaire,
+                    valeur: quantite * prixUnitaire,
+                    seuilMin: 5,
+                    fournisseurPrincipal: formData.get('fournisseurPrincipal') || 'Non défini',
+                    fournisseurs: [{
+                        nom: formData.get('fournisseurPrincipal') || 'Non défini',
+                        prix: prixUnitaire,
+                        delai: '1-2 jours'
+                    }],
+                    recette: [],
+                    description: formData.get('description') || ''
+                };
+                
+                inventaire.push(newItem);
             }
-        };
+            
+            closeModal();
+        }
 
-        startApp();
+        function deleteItem(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+                inventaire.splice(inventaire.findIndex(item => item.id === id), 1);
+                renderApp();
+            }
+        }
+
+        function editItem(id) {
+            openItemDetail(id);
+        }
+
+        function getStatusColor(statut) {
+            switch(statut) {
+                case 'Terminé': return 'bg-green-100 text-green-800';
+                case 'En cours': return 'bg-blue-100 text-blue-800';
+                case 'Planifié': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Démarrer l'application
+        renderApp();
     </script>
 </body>
 </html>
